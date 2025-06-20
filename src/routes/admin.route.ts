@@ -1,28 +1,14 @@
 import { FastifyInstance } from 'fastify'
-import { Admin } from '../models/Admin'
-import { Application } from '../models/Application'
-import { UserProfile } from '../models/UserProfile'
+import { Admin } from '../models/admin.model'
+import { Application } from '../models/application.model'
+import { UserProfile } from '../models/profile.model'
 import { adminLoginSchema } from '../schemas/validation'
-import { sendSMS } from '../utils/sms'
+import { sendSMS } from '../utils/sms.util'
+import { adminLogin } from '../controllers/admin/auth.controller'
 
 export async function adminRoutes(fastify: FastifyInstance) {
   // Admin login
-  fastify.post('/login', async (request, reply) => {
-    try {
-      const { email, password } = adminLoginSchema.parse(request.body)
-      
-      const admin = await Admin.findOne({ email })
-      if (!admin || !(await admin.comparePassword(password))) {
-        return reply.status(401).send({ error: 'Invalid credentials' })
-      }
-      
-      const token = fastify.jwt.sign({ adminId: admin._id, email, role: 'admin' })
-      
-      return { success: true, token, message: 'Login successful' }
-    } catch (error) {
-      return reply.status(400).send({ error: error.message })
-    }
-  })
+  fastify.post('/login', adminLogin)
   
   // Middleware for admin routes
   fastify.addHook('preHandler', async (request, reply) => {
@@ -96,7 +82,8 @@ export async function adminRoutes(fastify: FastifyInstance) {
         total
       }
     } catch (error) {
-      return reply.status(500).send({ error: error.message })
+      const errorMessage = error instanceof Error ? error.message : 'An error occurred'
+      return reply.status(500).send({ error: errorMessage })
     }
   })
   
@@ -115,7 +102,8 @@ export async function adminRoutes(fastify: FastifyInstance) {
       
       return { application }
     } catch (error) {
-      return reply.status(500).send({ error: error.message })
+      const errorMessage = error instanceof Error ? error.message : 'An error occurred'
+      return reply.status(500).send({ error: errorMessage })
     }
   })
   

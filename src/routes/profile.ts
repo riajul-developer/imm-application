@@ -1,54 +1,37 @@
 import { FastifyInstance } from 'fastify'
-import { UserProfile } from '../models/UserProfile'
+import { UserProfile } from '../models/profile.model'
 import { applicationSchema } from '../schemas/validation'
-import { uploadFiles } from '../utils/fileUpload'
+import { uploadFiles } from '../utils/fileUpload.util'
+import { serverErrorResponse, successResponse, unauthorizedResponse } from '../utils/response.util'
 
 export async function profileRoutes(fastify: FastifyInstance) {
   // Middleware to verify JWT
   fastify.addHook('preHandler', async (request, reply) => {
     try {
       await request.jwtVerify()
-    } catch (err) {
-      reply.send(err)
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unauthorized access';
+      return unauthorizedResponse(reply, errorMessage)  
     }
   })
   
   // Get user profile
   fastify.get('/me', async (request, reply) => {
     try {
-      const user = request.user as { userId: string }
+      const user = request.user as {phoneNumber: number, userId: string }
       const profile = await UserProfile.findOne({ userId: user.userId })
-      
-      if (!profile) {
-        return { profile: null, message: 'Profile not found' }
-      }
-      
-      return { profile }
+
+      return successResponse(reply, 'Profile retrieved successfully', { phoneNumber: user.phoneNumber, ...profile })
+
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred'
-      return reply.status(500).send({ error: errorMessage })
+      return serverErrorResponse(reply)
     }
   })
   
   // Create or update user profile
   fastify.post('/update', async (request, reply) => {
     try {
-      const files: { [key: string]: any } = {};
       const fields: { [key: string]: any } = {};
-
-      // Parse multipart form data
-      if (request.isMultipart()) {
-        const parts = request.parts();
-        for await (const part of parts) {
-          if (part.type === 'file') {
-            files[part.fieldname] = await uploadFiles(part);
-          } else {
-            fields[part.fieldname] = part.value;
-          }
-        }
-      } else {
-        Object.assign(fields, request.body);
-      }
 
       // Parse nested objects
       const parsedFields = {

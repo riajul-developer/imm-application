@@ -3,11 +3,11 @@ import cors from '@fastify/cors'
 import multipart from '@fastify/multipart'
 import jwt from '@fastify/jwt'
 import mongoose from 'mongoose'
+import fastifyStatic from '@fastify/static'
+import { join } from 'path'
 import dotenv from 'dotenv'
-import { authRoutes } from './routes/auth'
-import { profileRoutes } from './routes/profile'
-import { applicationRoutes } from './routes/application'
-import { adminRoutes } from './routes/admin'
+import { adminRoutes } from './routes/admin.route'
+import clientRoutes from './routes/client.route'
 
 dotenv.config()
 
@@ -24,8 +24,20 @@ fastify.register(multipart, {
   }
 })
 
+fastify.register(fastifyStatic, {
+  root: join(process.cwd(), 'uploads'),
+  prefix: '/uploads/', 
+})
+
 fastify.register(jwt, {
   secret: process.env.JWT_SECRET || 'your-secret-key'
+})
+
+mongoose.set('toJSON', { 
+  transform: function(doc, ret) {
+    delete ret.__v;
+    return ret;
+  }
 })
 
 // Database connection
@@ -40,10 +52,10 @@ const connectDB = async () => {
 }
 
 // Register routes
-fastify.register(authRoutes, { prefix: '/api/auth' })
-fastify.register(profileRoutes, { prefix: '/api/profile' })
-fastify.register(applicationRoutes, { prefix: '/api/application' })
-fastify.register(adminRoutes, { prefix: '/api/admin' })
+fastify.register(clientRoutes, { prefix: '/api' })
+// fastify.register(adminRoutes, { prefix: '/api/admin' })
+// fastify.register(applicationRoutes, { prefix: '/api/application' })
+// fastify.register(adminRoutes, { prefix: '/api/admin' })
 
 // Health check
 fastify.get('/health', async (request, reply) => {
