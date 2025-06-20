@@ -1,0 +1,32 @@
+{
+  "name": "application-form-api",
+  "version": "1.0.0",
+  "description": "Application Form API with OTP verification",
+  "main": "dist/server.js",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "build": "tsc",
+    "start": "node dist/server.js"
+  },
+  "dependencies": {
+    "fastify": "^4.24.3",
+    "@fastify/multipart": "^8.0.0",
+    "@fastify/cors": "^8.4.0",
+    "@fastify/jwt": "^7.2.4",
+    "mongoose": "^8.0.3",
+    "zod": "^3.22.4",
+    "bcryptjs": "^2.4.3",
+    "nodemailer": "^6.9.7",
+    "twilio": "^4.19.0",
+    "multer": "^1.4.5-lts.1",
+    "dotenv": "^16.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.4",
+    "@types/bcryptjs": "^2.4.6",
+    "@types/nodemailer": "^6.4.14",
+    "@types/multer": "^1.4.11",
+    "typescript": "^5.3.3",
+    "tsx": "^4.6.2"
+  }
+}
