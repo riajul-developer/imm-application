@@ -284,9 +284,6 @@ export const profileEducationInfo = async (request: FastifyRequest, reply: Fasti
 
 export const profileEmergencyContact = async (request: FastifyRequest, reply: FastifyReply) => {
   try {
-    const contentType = request.headers['content-type'] || ''
-    const isMultipart = contentType.includes('multipart/form-data')
-
     // Get userId from verified token
     const userId = (request.user as any)?.userId
     if (!userId) {
