@@ -6,16 +6,18 @@ export interface IUserProfile extends mongoose.Document {
     fullName: string
     phone: string
     email: string
-    dateOfBirth: Date
     profilePicFile: { name: string; url: string }
   }
   identity: {
     nidNumber: string
+    dateOfBirth: Date
     nidFiles: { name: string; url: string }[]
   }
   education: {
     degree: string
-    certificateFiles: { title: string; name: string; url: string }[]
+    cgpaOrGpa?: number 
+    passingYear: number
+    certificateFiles: { name: string; url: string }[]
   }[]
   emergencyContact: {
     name: string
@@ -55,7 +57,6 @@ const userProfileSchema = new mongoose.Schema(
       fullName: { type: String },
       phone: { type: String },
       email: { type: String },
-      dateOfBirth: { type: Date },
       profilePicFile: {
         name: { type: String },
         url: { type: String }
@@ -63,6 +64,7 @@ const userProfileSchema = new mongoose.Schema(
     },
     identity: {
       nidNumber: { type: String },
+      dateOfBirth: { type: Date },
       nidFiles: [
         {
           name: { type: String },
@@ -73,9 +75,18 @@ const userProfileSchema = new mongoose.Schema(
     education: [
       {
         degree: { type: String },
+        cgpaOrGpa: { 
+          type: Number,
+          min: 0,
+          max: 5.0 
+        },
+        passingYear: { 
+          type: Number,
+          min: 1950, 
+          max: new Date().getFullYear() + 1 
+        },
         certificateFiles: [
           {
-            title: { type: String },
             name: { type: String },
             url: { type: String }
           }
