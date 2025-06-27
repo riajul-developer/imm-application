@@ -3,7 +3,7 @@ import { FastifyRequest, FastifyReply } from 'fastify'
 import { ZodError } from 'zod'
 import { badErrorResponse, serverErrorResponse, successResponse } from '../../utils/response.util'
 import { userProfileBasicInfoSchema, userProfileEducationSchema, emergencyContactSchema, addressSchema, otherSchema } from '../../schemas/profile.schema'
-import { getUserProfile, upsertAddress, upsertBasicInfo, upsertCvFile, upsertEducation, upsertEmergencyContact, upsertIdentity, upsertOther } from '../../services/client/profile.service'
+import { getUserProfile, upsertAddress, upsertBasicInfo, upsertCvFile, upsertEducation, upsertEmergencyContact, upsertIdentity, upsertOther } from '../../services/profile.service'
 import { processMultipartForm } from '../../utils/fileUpload.util'
 import { deleteFileByUrl } from '../../utils/fileDelete.util'
 

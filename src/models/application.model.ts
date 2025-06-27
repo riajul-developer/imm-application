@@ -1,51 +1,58 @@
 import mongoose from 'mongoose'
 
+export type ApplicationStatus = 'submitted' | 'under-review' | 'approved' | 'rejected'
+
 export interface IApplication extends mongoose.Document {
   userId: mongoose.Types.ObjectId
-  userProfileId: mongoose.Types.ObjectId
-  status: 'pending' | 'approved' | 'rejected'
+  status: ApplicationStatus
   submittedAt: Date
   reviewedAt?: Date
-  reviewedBy?: string
-  applicationNumber: string
+  reviewedBy?: mongoose.Types.ObjectId
+  rejectionReason?: string
+  adminNotes?: string
+  createdAt: Date
+  updatedAt: Date
 }
 
-const applicationSchema = new mongoose.Schema({
-  userId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    required: true
+const applicationSchema = new mongoose.Schema(
+  {
+    userId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: true,
+    },
+    status: {
+      type: String,
+      enum: ['submitted', 'under-review', 'approved', 'rejected'],
+      default: 'submitted'
+    },
+    submittedAt: {
+      type: Date,
+      default: Date.now
+    },
+    reviewedAt: {
+      type: Date
+    },
+    reviewedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User'
+    },
+    rejectionReason: {
+      type: String,
+      trim: true
+    },
+    adminNotes: {
+      type: String,
+      trim: true
+    }
   },
-  userProfileId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'UserProfile',
-    required: true
-  },
-  status: {
-    type: String,
-    enum: ['pending', 'approved', 'rejected'],
-    default: 'pending'
-  },
-  submittedAt: {
-    type: Date,
-    default: Date.now
-  },
-  reviewedAt: Date,
-  reviewedBy: String,
-  applicationNumber: {
-    type: String,
-    unique: true,
-    required: true
+  {
+    timestamps: true
   }
-})
+)
 
-// Generate application number before saving
-applicationSchema.pre('save', async function(next) {
-  if (!this.applicationNumber) {
-    const count = await mongoose.model('Application').countDocuments()
-    this.applicationNumber = `APP${Date.now()}${(count + 1).toString().padStart(4, '0')}`
-  }
-  next()
-})
+applicationSchema.index({ userId: 1 })
+applicationSchema.index({ status: 1 })
+applicationSchema.index({ submittedAt: -1 })
 
 export const Application = mongoose.model<IApplication>('Application', applicationSchema)

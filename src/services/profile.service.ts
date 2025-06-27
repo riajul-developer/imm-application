@@ -1,5 +1,5 @@
 import mongoose from 'mongoose'
-import { UserProfile, IUserProfile, IIdentity, IBasic, IEmergencyContact, IAddress, IOther, ICvFile } from '../../models/profile.model'
+import { UserProfile, IUserProfile, IIdentity, IBasic, IEmergencyContact, IAddress, IOther, ICvFile } from '../models/profile.model'
 
 type BasicInfoPayload = {
   userId: string
