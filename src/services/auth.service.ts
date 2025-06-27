@@ -1,5 +1,5 @@
-import { User } from '../../models/user.model'
-import { sendSMS } from '../../utils/sms.util'
+import { User } from '../models/user.model'
+import { sendSMS } from '../utils/sms.util'
 
 export async function sendOtp(phoneNumber: string) {
   // const otp = Math.floor(100000 + Math.random() * 900000).toString()
@@ -34,3 +34,13 @@ export async function verifyOtp(phoneNumber: string, otp: string, request: any) 
 
   return request.server.jwt.sign({ userId: user._id, phoneNumber })
 }
+
+
+// export async function loginAdmin(email: string, password: string, request: any) {
+//   const admin = await Admin.findOne({ email })
+//   if (!admin || !(await admin.comparePassword(password))) {
+//     throw new Error('Invalid credentials')
+//   }
+//   const token = request.server.jwt.sign({ adminId: admin._id, email, role: 'admin' })
+//   return { success: true, token, message: 'Login successful' }
+// }

@@ -1,11 +1,9 @@
 import { FastifyRequest, FastifyReply } from 'fastify'
 import { ZodError } from 'zod'
-import * as authService from '../../services/client/auth.service'
+import * as authService from '../../services/auth.service'
 import { sendOtpSchema, verifyOtpSchema } from '../../schemas/otp.schema'
 import { badErrorResponse, serverErrorResponse, successResponse } from '../../utils/response.util'
-import { getUserProfile } from '../../services/client/profile.service'
-import fastifyJwt from '@fastify/jwt'
-import { jwt } from 'twilio'
+import { getUserProfile } from '../../services/profile.service'
 
 export const sendOtp = async (request: FastifyRequest, reply: FastifyReply) => {
   try {

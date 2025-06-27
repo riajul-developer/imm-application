@@ -54,8 +54,6 @@ const connectDB = async () => {
 // Register routes
 fastify.register(clientRoutes, { prefix: '/api' })
 // fastify.register(adminRoutes, { prefix: '/api/admin' })
-// fastify.register(applicationRoutes, { prefix: '/api/application' })
-// fastify.register(adminRoutes, { prefix: '/api/admin' })
 
 // Health check
 fastify.get('/health', async (request, reply) => {
