@@ -2,10 +2,11 @@
 import { FastifyRequest, FastifyReply } from 'fastify'
 import { ZodError } from 'zod'
 import { badErrorResponse, serverErrorResponse, successResponse } from '../../utils/response.util'
-import { userProfileBasicInfoSchema, userProfileIdentitySchema, userProfileEducationSchema } from '../../schemas/profile.schema'
-import { getUserProfile, upsertBasicInfo, upsertEducation, upsertIdentity } from '../../services/client/profile.service'
+import { userProfileBasicInfoSchema, userProfileEducationSchema, emergencyContactSchema, addressSchema, otherSchema } from '../../schemas/profile.schema'
+import { getUserProfile, upsertAddress, upsertBasicInfo, upsertCvFile, upsertEducation, upsertEmergencyContact, upsertIdentity, upsertOther } from '../../services/client/profile.service'
 import { processMultipartForm } from '../../utils/fileUpload.util'
 import { deleteFileByUrl } from '../../utils/fileDelete.util'
+
 
 export const profileBasicInfo = async (request: FastifyRequest, reply: FastifyReply) => {
   try {
@@ -23,6 +24,7 @@ export const profileBasicInfo = async (request: FastifyRequest, reply: FastifyRe
     let oldProfilePicFile: { name: string; url: string } | null | undefined = undefined;
 
     if (isMultipart) {
+
 
       const existingProfile = await getUserProfile(userId)
       oldProfilePicFile = existingProfile?.basic?.profilePicFile
@@ -80,6 +82,7 @@ export const profileBasicInfo = async (request: FastifyRequest, reply: FastifyRe
       userId,
       basic: {
         ...parsed,
+        phone: (request.user as any)?.phoneNumber,
         profilePicFile: uploadedFile || oldProfilePicFile || undefined,
       }
     })
@@ -87,8 +90,6 @@ export const profileBasicInfo = async (request: FastifyRequest, reply: FastifyRe
     return successResponse(reply, 'Basic profile info saved successfully', profile)
 
   } catch (error) {
-    console.error('Profile update error:', error)
-
     if (error instanceof ZodError) {
       return badErrorResponse(reply, 'Validation failed', error.errors.map(e => ({
         path: e.path.join('.'),
@@ -98,37 +99,26 @@ export const profileBasicInfo = async (request: FastifyRequest, reply: FastifyRe
     return serverErrorResponse(reply, 'Failed to save basic profile info')
   }
 }
+
 export const profileIdentity = async (request: FastifyRequest, reply: FastifyReply) => {
   try {
     const contentType = request.headers['content-type'] || ''
     const isMultipart = contentType.includes('multipart/form-data')
 
-    // Get userId from verified token
     const userId = (request.user as any)?.userId
     if (!userId) {
       return badErrorResponse(reply, 'Unauthorized user')
     }
 
     let body: any = {}
-    let uploadedFiles: Array<{ name: string; url: string }> = []
-    let cleanOldFiles: Array<{ name: string; url: string }> = [];
+    let uploadedFiles: Array<{name: string; url: string; type: string; side?: string }> = [];
 
     if (isMultipart) {
-
-      const existingProfile = await getUserProfile(userId)
-      let oldNidFiles = existingProfile?.identity?.nidFiles || []
-
-      cleanOldFiles = oldNidFiles.map((file: any) => ({
-        name: file.name,
-        url: file.url
-      }))
-
-
       const { body: formBody, uploadResult } = await processMultipartForm(
         request,
-        ['nidPictures'], 
+        ['nidFrontDoc', 'nidBackDoc', 'passportFrontDoc', 'passportBackDoc', 'birthRegDoc'], 
         {
-          maxSize: 3 * 1024 * 1024, // 3MB
+          maxSize: 3 * 1024 * 1024,
           allowedTypes: ['image/jpeg', 'image/png', 'image/webp'],
           uploadDir: 'uploads'
         }
@@ -143,35 +133,64 @@ export const profileIdentity = async (request: FastifyRequest, reply: FastifyRep
 
       body = formBody
 
-      uploadedFiles = uploadResult.files.map(file => ({
-        name: file.name,
-        url: file.url
-      }))
+      uploadResult.files.forEach(file => {
+        let type: string, side: string | undefined
 
-      if (uploadResult.files.length > 0) {
-        body.nidFiles = uploadedFiles
-      }
+        
+      console.log("upload result", file);
 
+        switch (file.fieldname) {
+          case 'nidFrontDoc': type = 'nid'; side = 'front'; break
+          case 'nidBackDoc': type = 'nid'; side = 'back'; break
+          case 'passportFrontDoc': type = 'passport'; side = 'front'; break
+          case 'passportBackDoc': type = 'passport'; side = 'back'; break
+          case 'birthRegDoc': type = 'birth-reg'; break
+          default: return
+        }
+
+        uploadedFiles.push({ name: file.name, url: file.url, type, side })
+      })
     } else {
       body = request.body
     }
 
-    // Validate form data
-    const parsed = userProfileIdentitySchema.parse(body)
+    const existingProfile = await getUserProfile(userId)
+    const existingFiles = existingProfile?.identity?.docFiles || []
+
+    // Check type consistency
+    if (existingFiles.length > 0 && uploadedFiles.length > 0) {
+      const existingType = existingFiles[0].type
+      const newTypes = [...new Set(uploadedFiles.map(f => f.type))]
+      
+      if (newTypes.some(t => t !== existingType)) {
+        return badErrorResponse(reply, `You can only upload ${existingType} files`)
+      }
+    }
+
+    let mergedFiles = [...existingFiles]
+
+    uploadedFiles.forEach(newFile => {
+      const index = newFile.type === 'birth-reg' 
+        ? mergedFiles.findIndex(f => f.type === newFile.type)
+        : mergedFiles.findIndex(f => f.type === newFile.type && f.side === newFile.side)
+
+      if (index !== -1) {
+        mergedFiles[index] = newFile
+      } else {
+        mergedFiles.push(newFile)
+      }
+    })
 
     const profile = await upsertIdentity({
       userId,
       identity: {
-        ...parsed,
-        nidFiles: uploadedFiles.length > 0 ? uploadedFiles : cleanOldFiles,
+        number: body.number,
+        docFiles: mergedFiles
       }
     })
 
     return successResponse(reply, 'Profile identity saved successfully', profile)
-
   } catch (error) {
-    console.error('Profile update error:', error)
-
     if (error instanceof ZodError) {
       return badErrorResponse(reply, 'Validation failed', error.errors.map(e => ({
         path: e.path.join('.'),
@@ -181,6 +200,175 @@ export const profileIdentity = async (request: FastifyRequest, reply: FastifyRep
     return serverErrorResponse(reply, 'Failed to save profile identity')
   }
 }
+
+export const profileEmergencyContact = async (request: FastifyRequest, reply: FastifyReply) => {
+  try {
+    const userId = (request.user as any)?.userId
+    if (!userId) {
+      return badErrorResponse(reply, 'Unauthorized user')
+    }
+
+    const body = request.body as any
+
+    const parsed = emergencyContactSchema.parse(body)
+
+    const profile = await upsertEmergencyContact({
+      userId,
+      emergencyContact: {
+        name: parsed.name,
+        phone: parsed.phone
+      }
+    })
+
+    return successResponse(reply, 'Emergency contact saved successfully', profile)
+
+  } catch (error) {
+
+    if (error instanceof ZodError) {
+      return badErrorResponse(reply, 'Validation failed', error.errors.map(e => ({
+        path: e.path.join('.'),
+        message: e.message,
+      })))
+    }
+    return serverErrorResponse(reply, 'Failed to save emergency contact')
+  }
+}
+
+export const profileAddress = async (request: FastifyRequest, reply: FastifyReply) => {
+  try {
+    const userId = (request.user as any)?.userId
+    if (!userId) {
+      return badErrorResponse(reply, 'Unauthorized user')
+    }
+
+    const body = request.body as any
+
+    const parsed = addressSchema.parse(body)
+
+    const profile = await upsertAddress({
+      userId,
+      address: {
+        present: {
+          district: parsed.present.district,
+          upazila: parsed.present.upazila,
+          street: parsed.present.street
+        },
+        permanent: {
+          district: parsed.permanent.district,
+          upazila: parsed.permanent.upazila,
+          street: parsed.permanent.street
+        }
+      }
+    })
+
+    return successResponse(reply, 'Address saved successfully', profile)
+
+  } catch (error) {
+    if (error instanceof ZodError) {
+      return badErrorResponse(reply, 'Validation failed', error.errors.map(e => ({
+        path: e.path.join('.'),
+        message: e.message,
+      })))
+    }
+    return serverErrorResponse(reply, 'Failed to save address')
+  }
+}
+
+export const profileOther = async (request: FastifyRequest, reply: FastifyReply) => {
+ try {
+   const userId = (request.user as any)?.userId
+   if (!userId) {
+     return badErrorResponse(reply, 'Unauthorized user')
+   }
+
+   const body = request.body as any
+
+   const parsed = otherSchema.parse(body)
+
+   const profile = await upsertOther({
+     userId,
+     other: {
+       fathersName: parsed.fathersName,
+       mothersName: parsed.mothersName,
+       religion: parsed.religion,
+       gender: parsed.gender,
+       maritalStatus: parsed.maritalStatus
+     }
+   })
+
+   return successResponse(reply, 'Other information saved successfully', profile)
+
+ } catch (error) {
+   if (error instanceof ZodError) {
+     return badErrorResponse(reply, 'Validation failed', error.errors.map(e => ({
+       path: e.path.join('.'),
+       message: e.message,
+     })))
+   }
+   return serverErrorResponse(reply, 'Failed to save other information')
+ }
+}
+
+export const profileCvUpload = async (request: FastifyRequest, reply: FastifyReply) => {
+ try {
+   const userId = (request.user as any)?.userId
+   if (!userId) {
+     return badErrorResponse(reply, 'Unauthorized user')
+   }
+
+   let uploadedFile: { name: string; url: string } | null = null
+   let oldCvFile: { name: string; url: string } | null | undefined = undefined
+
+   const existingProfile = await getUserProfile(userId)
+   oldCvFile = existingProfile?.cvFile
+
+   const { uploadResult } = await processMultipartForm(
+     request,
+     ['cvFile'],
+     {
+       maxSize: 5 * 1024 * 1024, // 5MB for CV
+       allowedTypes: ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'],
+       uploadDir: 'uploads'
+     }
+   )
+
+   if (!uploadResult.success) {
+     if (uploadResult.validationErrors) {
+       return badErrorResponse(reply, 'Validation failed', uploadResult.validationErrors)
+     }
+     return serverErrorResponse(reply, uploadResult.error || 'File upload failed')
+   }
+
+   if (uploadResult.files.length > 0) {
+    uploadedFile = {
+      name: uploadResult.files[0].name,
+      url: uploadResult.files[0].url
+    }
+
+    if (oldCvFile?.url && oldCvFile.url !== uploadedFile.url) {
+      await deleteFileByUrl(oldCvFile.url, 'uploads')
+    }
+
+   } else {
+      return badErrorResponse(reply, 'Validation failed', [{
+        path: 'cvFile',
+        message: 'CV file is required'
+      }])
+   }
+
+   const profile = await upsertCvFile({
+     userId,
+     cvFile: uploadedFile
+   })
+
+   return successResponse(reply, 'Profile CV uploaded successfully', profile)
+
+ } catch (error) {
+   console.error('CV upload error:', error)
+   return serverErrorResponse(reply, 'Failed to upload CV')
+ }
+}
+
 export const profileEducationInfo = async (request: FastifyRequest, reply: FastifyReply) => {
   try {
     const contentType = request.headers['content-type'] || ''
@@ -282,92 +470,23 @@ export const profileEducationInfo = async (request: FastifyRequest, reply: Fasti
   }
 }
 
-export const profileEmergencyContact = async (request: FastifyRequest, reply: FastifyReply) => {
-  try {
-    // Get userId from verified token
-    const userId = (request.user as any)?.userId
-    if (!userId) {
-      return badErrorResponse(reply, 'Unauthorized user')
-    }
+export const profileMe = async (request: FastifyRequest, reply: FastifyReply) => {
+ try {
+   const userId = (request.user as any)?.userId
+   if (!userId) {
+     return badErrorResponse(reply, 'Unauthorized user')
+   }
 
-    let body: any = {}
-    let uploadedFile: { name: string; url: string } | null = null
-    let oldProfilePicFile: { name: string; url: string } | null | undefined = undefined;
+   const profile = await getUserProfile(userId)
+   
+   if (!profile) {
+     return badErrorResponse(reply, 'Profile not found')
+   }
 
-    if (isMultipart) {
+   return successResponse(reply, 'Profile retrieved successfully', profile)
 
-      const existingProfile = await getUserProfile(userId)
-      oldProfilePicFile = existingProfile?.basic?.profilePicFile
-
-      // Process multipart form with file uploads
-      const { body: formBody, uploadResult } = await processMultipartForm(
-        request,
-        ['profilePic'], 
-        {
-          maxSize: 3 * 1024 * 1024, // 3MB
-          allowedTypes: ['image/jpeg', 'image/png'],
-          uploadDir: 'uploads'
-        }
-      )
-
-      // Check if file upload failed
-      if (!uploadResult.success) {
-        if (uploadResult.validationErrors) {
-          return badErrorResponse(reply, 'Validation failed', uploadResult.validationErrors)
-        }
-        return serverErrorResponse(reply, uploadResult.error || 'File upload failed')
-      }
-
-      body = formBody
-      
-      // Get the first uploaded file (since model expects single file)
-      if (uploadResult.files.length > 0) {
-        uploadedFile = {
-          name: uploadResult.files[0].name,
-          url: uploadResult.files[0].url
-        }
-        body.profilePicFile = uploadedFile
-
-
-        if (oldProfilePicFile?.url && oldProfilePicFile.url !== uploadedFile.url) {
-          console.log(`Deleting old profile picture: ${oldProfilePicFile.url}`)
-          const deleteSuccess = await deleteFileByUrl(oldProfilePicFile.url, 'uploads')
-          if (deleteSuccess) {
-            console.log('Old profile picture deleted successfully')
-          } else {
-            console.warn('Failed to delete old profile picture')
-          }
-        }
-      }
-
-    } else {
-      body = request.body
-    }
-
-    // Validate form data
-    const parsed = userProfileBasicInfoSchema.parse(body)
-
-    // Upsert profile with file info
-    const profile = await upsertBasicInfo({
-      userId,
-      basic: {
-        ...parsed,
-        profilePicFile: uploadedFile || oldProfilePicFile || undefined,
-      }
-    })
-
-    return successResponse(reply, 'Basic profile info saved successfully', profile)
-
-  } catch (error) {
-    console.error('Profile update error:', error)
-
-    if (error instanceof ZodError) {
-      return badErrorResponse(reply, 'Validation failed', error.errors.map(e => ({
-        path: e.path.join('.'),
-        message: e.message,
-      })))
-    }
-    return serverErrorResponse(reply, 'Failed to save basic profile info')
-  }
+ } catch (error) {
+   console.error('Get profile error:', error)
+   return serverErrorResponse(reply, 'Failed to retrieve profile')
+ }
 }
-  

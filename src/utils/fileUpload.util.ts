@@ -11,6 +11,7 @@ export interface UploadedFile {
   url: string;
   path: string;
   size: number;
+  fieldname: string;
 }
 
 export interface FileUploadOptions {
@@ -35,6 +36,79 @@ const DEFAULT_OPTIONS: Required<FileUploadOptions> = {
 /**
  * Upload single file
  */
+// export async function uploadSingleFile(
+//   part: MultipartFile,
+//   request: FastifyRequest,
+//   options: FileUploadOptions = {}
+// ): Promise<FileUploadResult> {
+//   const opts = { ...DEFAULT_OPTIONS, ...options }
+  
+//   try {
+//     // Validate file type
+//     if (!opts.allowedTypes.includes(part.mimetype)) {
+//       return {
+//         success: false,
+//         files: [],
+//         validationErrors: [{
+//           path: part.fieldname,
+//           message: `Invalid file type. Only ${opts.allowedTypes.join(', ')} allowed`
+//         }]
+//       }
+//     }
+
+//     // Ensure uploads directory exists
+//     const uploadsDir = join(process.cwd(), opts.uploadDir)
+//     await mkdir(uploadsDir, { recursive: true })
+
+//     // Generate unique filename
+//     const fileExtension = part.filename?.split('.').pop() || 'jpg'
+//     const uniqueFilename = `${randomUUID()}.${fileExtension}`
+//     const filePath = join(uploadsDir, uniqueFilename)
+
+//     // Create write stream and save file
+//     const writeStream = createWriteStream(filePath)
+//     await pipeline(part.file, writeStream)
+
+//     // Check file size after saving
+//     const stats = await import('fs').then(fs => fs.promises.stat(filePath))
+//     if (stats.size > opts.maxSize) {
+//       // Delete the file if too large
+//       await import('fs').then(fs => fs.promises.unlink(filePath))
+//       return {
+//         success: false,
+//         files: [],
+//         validationErrors: [{
+//           path: part.fieldname,
+//           message: `File size must be less than or equal to ${Math.round(opts.maxSize / (1024 * 1024))}MB`
+//         }]
+//       }
+//     }
+
+//     // Create file URL
+//     const fileUrl = `${request.protocol}://${request.headers.host}/${opts.uploadDir}/${uniqueFilename}`
+    
+//     const uploadedFile: UploadedFile = {
+//       name: part.filename || uniqueFilename,
+//       url: fileUrl,
+//       path: filePath,
+//       size: stats.size
+//     }
+
+//     return {
+//       success: true,
+//       files: [uploadedFile]
+//     }
+
+//   } catch (error) {
+//     console.error('File upload error:', error)
+//     return {
+//       success: false,
+//       files: [],
+//       error: 'Failed to upload file'
+//     }
+//   }
+// }
+
 export async function uploadSingleFile(
   part: MultipartFile,
   request: FastifyRequest,
@@ -90,7 +164,8 @@ export async function uploadSingleFile(
       name: part.filename || uniqueFilename,
       url: fileUrl,
       path: filePath,
-      size: stats.size
+      size: stats.size,
+      fieldname: part.fieldname 
     }
 
     return {
@@ -160,7 +235,6 @@ export async function processMultipartForm(
           }
         }
       } else if (part.type === 'field') {
-        // Handle form fields
         body[part.fieldname] = part.value
       }
     }
@@ -176,7 +250,6 @@ export async function processMultipartForm(
     }
 
   } catch (error) {
-    console.error('Multipart processing error:', error)
     return {
       body,
       uploadResult: {
