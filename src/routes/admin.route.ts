@@ -4,6 +4,9 @@ import { profileBasicInfo, profileIdentity, profileEducationInfo, profileEmergen
 import authenticate from '../plugins/auth.plugin'
 
 export default async function clientRoutes(fastify: FastifyInstance) {
+
+  
+
   export const adminApplicationRoutes = async (fastify: FastifyInstance) => {
     fastify.get('/all', { preHandler: [authenticate, isAdmin] }, getApplicationsAdmin)
     fastify.get('/stats', { preHandler: [authenticate, isAdmin] }, getApplicationStatsAdmin)
