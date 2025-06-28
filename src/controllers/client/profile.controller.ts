@@ -3,7 +3,7 @@ import { FastifyRequest, FastifyReply } from 'fastify'
 import { ZodError } from 'zod'
 import { badErrorResponse, serverErrorResponse, successResponse } from '../../utils/response.util'
 import { userProfileBasicInfoSchema, userProfileEducationSchema, emergencyContactSchema, addressSchema, otherSchema, userProfileIdentitySchema } from '../../schemas/profile.schema'
-import { getUserProfile, upsertAddress, upsertBasicInfo, upsertCvFile, upsertEducation, upsertEmergencyContact, upsertIdentity, upsertOther } from '../../services/profile.service'
+import { checkCanApply, getUserProfile, upsertAddress, upsertBasicInfo, upsertCvFile, upsertEducation, upsertEmergencyContact, upsertIdentity, upsertOther } from '../../services/profile.service'
 import { processMultipartForm } from '../../utils/fileUpload.util'
 import { deleteFileByUrl } from '../../utils/fileDelete.util'
 
@@ -70,7 +70,9 @@ export const profileBasicInfo = async (request: FastifyRequest, reply: FastifyRe
       }
     })
 
-    return successResponse(reply, 'Basic profile info saved successfully', profile)
+    const canApply = await checkCanApply(userId);
+
+    return successResponse(reply, 'Basic profile info saved successfully', {canApply, ...profile})
 
   } catch (error) {
 
@@ -191,7 +193,9 @@ export const profileIdentity = async (request: FastifyRequest, reply: FastifyRep
       }
     })
 
-    return successResponse(reply, 'Profile identity saved successfully', profile)
+    const canApply = await checkCanApply(userId);
+
+    return successResponse(reply, 'Profile identity saved successfully', {canApply, ...profile})
     
   } catch (error) {
 
@@ -232,7 +236,9 @@ export const profileEmergencyContact = async (request: FastifyRequest, reply: Fa
       }
     })
 
-    return successResponse(reply, 'Emergency contact saved successfully', profile)
+    const canApply = await checkCanApply(userId);
+
+    return successResponse(reply, 'Emergency contact saved successfully', {canApply, ...profile})
 
   } catch (error) {
 
@@ -273,7 +279,9 @@ export const profileAddress = async (request: FastifyRequest, reply: FastifyRepl
       }
     })
 
-    return successResponse(reply, 'Address saved successfully', profile)
+    const canApply = await checkCanApply(userId);
+
+    return successResponse(reply, 'Address saved successfully', {canApply, ...profile})
 
   } catch (error) {
     if (error instanceof ZodError) {
@@ -308,7 +316,9 @@ export const profileOther = async (request: FastifyRequest, reply: FastifyReply)
      }
    })
 
-   return successResponse(reply, 'Other information saved successfully', profile)
+   const canApply = await checkCanApply(userId);
+
+   return successResponse(reply, 'Other information saved successfully', {canApply, ...profile})
 
  } catch (error) {
    if (error instanceof ZodError) {
@@ -373,7 +383,9 @@ export const profileCvUpload = async (request: FastifyRequest, reply: FastifyRep
      cvFile: uploadedFile
    })
 
-   return successResponse(reply, 'Profile CV uploaded successfully', profile)
+   const canApply = await checkCanApply(userId);
+
+   return successResponse(reply, 'Profile CV uploaded successfully', {canApply, ...profile})
 
  } catch (error) {
    console.error('CV upload error:', error)
@@ -495,7 +507,9 @@ export const profileMe = async (request: FastifyRequest, reply: FastifyReply) =>
      return badErrorResponse(reply, 'Profile not found')
    }
 
-   return successResponse(reply, 'Profile retrieved successfully', profile)
+   const canApply = await checkCanApply(userId);
+
+   return successResponse(reply, 'Profile retrieved successfully', {canApply, ...profile.toObject()})
 
  } catch (error) {
    console.error('Get profile error:', error)

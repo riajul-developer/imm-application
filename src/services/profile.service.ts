@@ -51,6 +51,11 @@ export interface CvFilePayload {
   cvFile: ICvFile;
 }
 
+interface CanApplyPayload {
+  userId: mongoose.Types.ObjectId;
+  canApply: boolean;
+}
+
 export async function upsertBasicInfo(payload: BasicInfoPayload): Promise<IBasic> {
   const { userId, basic } = payload
 
@@ -138,4 +143,48 @@ export async function upsertEducation(payload: EducationPayload): Promise<IUserP
 export async function getUserProfile(userId: string): Promise<IUserProfile | null> {
   const profile = await UserProfile.findOne({ userId })
   return profile
+}
+
+export async function checkCanApply(userId: string): Promise<boolean> {
+    const profile = await UserProfile.findOne({ userId });
+    
+    if (!profile) {
+      return false;
+    }
+
+    const hasBasicInfo = profile.basic?.fullName && 
+                      profile.basic?.dateOfBirth && 
+                      profile.basic?.phone &&
+                      profile.basic?.profilePicFile?.name &&
+                      profile.basic?.profilePicFile?.url;
+
+    const hasIdentity = profile.identity?.number && 
+                      profile.identity?.docFiles?.length >= 1; 
+
+    const hasEmergencyContact = profile.emergencyContact?.name && 
+                      profile.emergencyContact?.phone;
+
+    const hasPresentAddress = profile.address?.present?.district && 
+                      profile.address?.present?.upazila && 
+                      profile.address?.present?.street;
+
+    const hasPermanentAddress = profile.address?.permanent?.district && 
+                      profile.address?.permanent?.upazila && 
+                      profile.address?.permanent?.street;
+
+    const hasOtherInfo = profile.other?.fathersName && 
+                        profile.other?.mothersName && 
+                        profile.other?.religion && 
+                        profile.other?.gender && 
+                        profile.other?.maritalStatus;
+
+    const hasCvFile = profile.cvFile?.name && profile.cvFile?.url;
+
+    return Boolean(hasBasicInfo &&
+               hasIdentity &&
+               hasEmergencyContact &&
+               hasPresentAddress &&
+               hasPermanentAddress &&
+               hasOtherInfo &&
+               hasCvFile);
 }
