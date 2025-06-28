@@ -2,45 +2,41 @@
 import { FastifyRequest, FastifyReply } from 'fastify'
 import { ZodError } from 'zod'
 import { badErrorResponse, serverErrorResponse, successResponse } from '../../utils/response.util'
-import { userProfileBasicInfoSchema, userProfileEducationSchema, emergencyContactSchema, addressSchema, otherSchema } from '../../schemas/profile.schema'
+import { userProfileBasicInfoSchema, userProfileEducationSchema, emergencyContactSchema, addressSchema, otherSchema, userProfileIdentitySchema } from '../../schemas/profile.schema'
 import { getUserProfile, upsertAddress, upsertBasicInfo, upsertCvFile, upsertEducation, upsertEmergencyContact, upsertIdentity, upsertOther } from '../../services/profile.service'
 import { processMultipartForm } from '../../utils/fileUpload.util'
 import { deleteFileByUrl } from '../../utils/fileDelete.util'
 
 
 export const profileBasicInfo = async (request: FastifyRequest, reply: FastifyReply) => {
+
+  let uploadedFile: { name: string; url: string } | null = null;
+
   try {
     const contentType = request.headers['content-type'] || ''
     const isMultipart = contentType.includes('multipart/form-data')
 
-    // Get userId from verified token
     const userId = (request.user as any)?.userId
     if (!userId) {
       return badErrorResponse(reply, 'Unauthorized user')
     }
 
-    let body: any = {}
-    let uploadedFile: { name: string; url: string } | null = null
+    let parsed: any = {};
     let oldProfilePicFile: { name: string; url: string } | null | undefined = undefined;
-
     if (isMultipart) {
-
-
       const existingProfile = await getUserProfile(userId)
       oldProfilePicFile = existingProfile?.basic?.profilePicFile
 
-      // Process multipart form with file uploads
       const { body: formBody, uploadResult } = await processMultipartForm(
         request,
         ['profilePic'], 
         {
           maxSize: 3 * 1024 * 1024, // 3MB
           allowedTypes: ['image/jpeg', 'image/png'],
-          uploadDir: 'uploads'
+          uploadDir: 'uploads/profile/basics'
         }
       )
 
-      // Check if file upload failed
       if (!uploadResult.success) {
         if (uploadResult.validationErrors) {
           return badErrorResponse(reply, 'Validation failed', uploadResult.validationErrors)
@@ -48,36 +44,23 @@ export const profileBasicInfo = async (request: FastifyRequest, reply: FastifyRe
         return serverErrorResponse(reply, uploadResult.error || 'File upload failed')
       }
 
-      body = formBody
-      
-      // Get the first uploaded file (since model expects single file)
       if (uploadResult.files.length > 0) {
         uploadedFile = {
           name: uploadResult.files[0].name,
           url: uploadResult.files[0].url
         }
-        body.profilePicFile = uploadedFile
-
-
-        if (oldProfilePicFile?.url && oldProfilePicFile.url !== uploadedFile.url) {
-          console.log(`Deleting old profile picture: ${oldProfilePicFile.url}`)
-          const deleteSuccess = await deleteFileByUrl(oldProfilePicFile.url, 'uploads')
-          if (deleteSuccess) {
-            console.log('Old profile picture deleted successfully')
-          } else {
-            console.warn('Failed to delete old profile picture')
-          }
-        }
       }
 
+      parsed = userProfileBasicInfoSchema.parse(formBody)
+      
+      if ((uploadedFile && oldProfilePicFile?.url) && oldProfilePicFile.url !== uploadedFile?.url) {
+        await deleteFileByUrl(oldProfilePicFile.url, 'uploads/profile/basics')
+      } 
+
     } else {
-      body = request.body
+      parsed = userProfileBasicInfoSchema.parse(request.body)
     }
 
-    // Validate form data
-    const parsed = userProfileBasicInfoSchema.parse(body)
-
-    // Upsert profile with file info
     const profile = await upsertBasicInfo({
       userId,
       basic: {
@@ -90,8 +73,13 @@ export const profileBasicInfo = async (request: FastifyRequest, reply: FastifyRe
     return successResponse(reply, 'Basic profile info saved successfully', profile)
 
   } catch (error) {
+
+    if (uploadedFile) {
+      await deleteFileByUrl(uploadedFile.url, 'uploads/profile/basics')
+    }
+
     if (error instanceof ZodError) {
-      return badErrorResponse(reply, 'Validation failed', error.errors.map(e => ({
+      return badErrorResponse(reply, 'Validation faileds', error.errors.map(e => ({
         path: e.path.join('.'),
         message: e.message,
       })))
@@ -101,6 +89,9 @@ export const profileBasicInfo = async (request: FastifyRequest, reply: FastifyRe
 }
 
 export const profileIdentity = async (request: FastifyRequest, reply: FastifyReply) => {
+
+  let uploadedFiles: Array<{name: string; url: string; type: string; side?: string }> = [];
+
   try {
     const contentType = request.headers['content-type'] || ''
     const isMultipart = contentType.includes('multipart/form-data')
@@ -110,35 +101,36 @@ export const profileIdentity = async (request: FastifyRequest, reply: FastifyRep
       return badErrorResponse(reply, 'Unauthorized user')
     }
 
-    let body: any = {}
-    let uploadedFiles: Array<{name: string; url: string; type: string; side?: string }> = [];
-
+    let parsed: any = {};
+    
     if (isMultipart) {
+
       const { body: formBody, uploadResult } = await processMultipartForm(
         request,
         ['nidFrontDoc', 'nidBackDoc', 'passportFrontDoc', 'passportBackDoc', 'birthRegDoc'], 
         {
           maxSize: 3 * 1024 * 1024,
           allowedTypes: ['image/jpeg', 'image/png', 'image/webp'],
-          uploadDir: 'uploads'
+          uploadDir: 'uploads/profile/identities'
         }
       )
 
       if (!uploadResult.success) {
+        if (uploadResult.files.length > 0) {
+          for (const uploadedFile of uploadResult.files) {
+            if (uploadedFile?.url) {
+              await deleteFileByUrl(uploadedFile.url, 'uploads/profile/identities');
+            }
+          }
+        }
         if (uploadResult.validationErrors) {
           return badErrorResponse(reply, 'Validation failed', uploadResult.validationErrors)
         }
         return serverErrorResponse(reply, uploadResult.error || 'File upload failed')
       }
 
-      body = formBody
-
       uploadResult.files.forEach(file => {
         let type: string, side: string | undefined
-
-        
-      console.log("upload result", file);
-
         switch (file.fieldname) {
           case 'nidFrontDoc': type = 'nid'; side = 'front'; break
           case 'nidBackDoc': type = 'nid'; side = 'back'; break
@@ -147,22 +139,28 @@ export const profileIdentity = async (request: FastifyRequest, reply: FastifyRep
           case 'birthRegDoc': type = 'birth-reg'; break
           default: return
         }
-
         uploadedFiles.push({ name: file.name, url: file.url, type, side })
       })
+
+      parsed = userProfileIdentitySchema.parse(formBody)
+
     } else {
-      body = request.body
+      parsed = userProfileIdentitySchema.parse(request.body)
     }
 
     const existingProfile = await getUserProfile(userId)
     const existingFiles = existingProfile?.identity?.docFiles || []
 
-    // Check type consistency
     if (existingFiles.length > 0 && uploadedFiles.length > 0) {
       const existingType = existingFiles[0].type
       const newTypes = [...new Set(uploadedFiles.map(f => f.type))]
       
       if (newTypes.some(t => t !== existingType)) {
+        if (uploadedFiles.length > 0) {
+          for (const uploadedFile of uploadedFiles) {
+            await deleteFileByUrl(uploadedFile.url, 'uploads/profile/identities');
+          }
+        }
         return badErrorResponse(reply, `You can only upload ${existingType} files`)
       }
     }
@@ -175,6 +173,10 @@ export const profileIdentity = async (request: FastifyRequest, reply: FastifyRep
         : mergedFiles.findIndex(f => f.type === newFile.type && f.side === newFile.side)
 
       if (index !== -1) {
+        const oldFile = mergedFiles[index];
+        if (oldFile?.url) {
+          deleteFileByUrl(oldFile.url, 'uploads/profile/identities'); 
+        }
         mergedFiles[index] = newFile
       } else {
         mergedFiles.push(newFile)
@@ -184,13 +186,23 @@ export const profileIdentity = async (request: FastifyRequest, reply: FastifyRep
     const profile = await upsertIdentity({
       userId,
       identity: {
-        number: body.number,
+        number: parsed.number,
         docFiles: mergedFiles
       }
     })
 
     return successResponse(reply, 'Profile identity saved successfully', profile)
+    
   } catch (error) {
+
+    if (uploadedFiles.length > 0) {
+      for (const uploadedFile of uploadedFiles) {
+        if (uploadedFile?.url) {
+          await deleteFileByUrl(uploadedFile.url, 'uploads/profile/identities');
+        }
+      }
+    }
+
     if (error instanceof ZodError) {
       return badErrorResponse(reply, 'Validation failed', error.errors.map(e => ({
         path: e.path.join('.'),
@@ -328,7 +340,7 @@ export const profileCvUpload = async (request: FastifyRequest, reply: FastifyRep
      {
        maxSize: 5 * 1024 * 1024, // 5MB for CV
        allowedTypes: ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'],
-       uploadDir: 'uploads'
+       uploadDir: 'uploads/profile/CVs'
      }
    )
 
@@ -346,10 +358,10 @@ export const profileCvUpload = async (request: FastifyRequest, reply: FastifyRep
     }
 
     if (oldCvFile?.url && oldCvFile.url !== uploadedFile.url) {
-      await deleteFileByUrl(oldCvFile.url, 'uploads')
+      await deleteFileByUrl(oldCvFile.url, 'uploads/profile/CVs')
     }
 
-   } else {
+    } else {
       return badErrorResponse(reply, 'Validation failed', [{
         path: 'cvFile',
         message: 'CV file is required'
