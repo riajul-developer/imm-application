@@ -1,37 +1,38 @@
-import mongoose from 'mongoose'
-import bcrypt from 'bcryptjs'
+import { Schema, model, Document } from 'mongoose'
 
-export interface IAdmin extends mongoose.Document {
+interface IAdmin extends Document {
   email: string
   password: string
+  isEmailVerified: boolean
+  token?: string
+  tokenExpiry?: Date
+  otp?: string
+  otpExpiry?: Date
   createdAt: Date
-  comparePassword(candidatePassword: string): Promise<boolean>
+  updatedAt: Date
 }
 
-const adminSchema = new mongoose.Schema({
+const adminSchema = new Schema<IAdmin>({
   email: {
     type: String,
     required: true,
-    unique: true
+    unique: true,
+    lowercase: true
   },
   password: {
     type: String,
     required: true
   },
-  createdAt: {
-    type: Date,
-    default: Date.now
-  }
+  isEmailVerified: {
+    type: Boolean,
+    default: false
+  },
+  token: String,
+  tokenExpiry: Date,
+  otp: String,
+  otpExpiry: Date
+}, {
+  timestamps: true
 })
 
-adminSchema.pre('save', async function(next) {
-  if (!this.isModified('password')) return next()
-  this.password = await bcrypt.hash(this.password, 12)
-  next()
-})
-
-adminSchema.methods.comparePassword = async function(candidatePassword: string): Promise<boolean> {
-  return bcrypt.compare(candidatePassword, this.password)
-}
-
-export const Admin = mongoose.model<IAdmin>('Admin', adminSchema)
+export const Admin = model<IAdmin>('Admin', adminSchema)

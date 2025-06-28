@@ -71,7 +71,7 @@ export const userProfileBasicInfoSchema = z.object({
 })
 
 export const userProfileIdentitySchema = z.object({
-  number: z.string().regex(/^\d{13}$|^\d{17}$/, 'Invalid document number')
+  number: z.string().min(1, 'Document number is required')
 })
 
 export const emergencyContactSchema = z.object({

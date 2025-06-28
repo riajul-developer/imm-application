@@ -6,7 +6,7 @@ import mongoose from 'mongoose'
 import fastifyStatic from '@fastify/static'
 import { join } from 'path'
 import dotenv from 'dotenv'
-import { adminRoutes } from './routes/admin.route'
+import adminRoutes from './routes/admin.route'
 import clientRoutes from './routes/client.route'
 
 dotenv.config()
@@ -53,7 +53,7 @@ const connectDB = async () => {
 
 // Register routes
 fastify.register(clientRoutes, { prefix: '/api' })
-// fastify.register(adminRoutes, { prefix: '/api/admin' })
+fastify.register(adminRoutes, { prefix: '/api/admin' })
 
 // Health check
 fastify.get('/health', async (request, reply) => {

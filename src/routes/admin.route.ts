@@ -1,19 +1,25 @@
-import { FastifyInstance } from 'fastify'
-import { sendOtp, verifyOtp } from '../controllers/client/auth.controller'
-import { profileBasicInfo, profileIdentity, profileEducationInfo, profileEmergencyContact, profileAddress, profileOther, profileCvUpload, profileMe } from '../controllers/client/profile.controller'
-import authenticate from '../plugins/auth.plugin'
+import { FastifyInstance } from 'fastify';
+import { registerAdmin } from '../controllers/admin/admin.controller';
 
-export default async function clientRoutes(fastify: FastifyInstance) {
+export default async function adminRoutes(fastify: FastifyInstance) {
 
+  // fastify.post('/admin/register', adminController.registerAdmin)
+  // fastify.get('/admin/verify-email', adminController.verifyEmail)
+  // fastify.post('/admin/login', adminController.loginAdmin)
   
-
-  export const adminApplicationRoutes = async (fastify: FastifyInstance) => {
-    fastify.get('/all', { preHandler: [authenticate, isAdmin] }, getApplicationsAdmin)
-    fastify.get('/stats', { preHandler: [authenticate, isAdmin] }, getApplicationStatsAdmin)
-    fastify.get('/:id', { preHandler: [authenticate, isAdmin] }, getApplicationDetailAdmin)
-    fastify.put('/:id/review', { preHandler: [authenticate, isAdmin] }, reviewApplicationAdmin)
-  }
+  // // Protected routes (require authentication)
+  // fastify.post('/admin/send-otp', {
+  //   preHandler: [fastify.authenticate]
+  // }, adminController.sendEmailOtp)
   
-  fastify.register(applicationRoutes, { prefix: '/application' })
+  // fastify.post('/admin/verify-otp', {
+  //   preHandler: [fastify.authenticate]
+  // }, adminController.verifyEmailOtp)
+  
+  // fastify.put('/admin/update-credentials', {
+  //   preHandler: [fastify.authenticate]
+  // }, adminController.updateCredentials)
 
+
+  fastify.post('/register', registerAdmin)
 }
