@@ -188,3 +188,8 @@ export async function checkCanApply(userId: string): Promise<boolean> {
                hasOtherInfo &&
                hasCvFile);
 }
+
+export async function needAdditionalInfo(userId: string): Promise<boolean> {
+  return true;
+}
+

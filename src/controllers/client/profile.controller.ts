@@ -3,9 +3,10 @@ import { FastifyRequest, FastifyReply } from 'fastify'
 import { ZodError } from 'zod'
 import { badErrorResponse, serverErrorResponse, successResponse } from '../../utils/response.util'
 import { userProfileBasicInfoSchema, userProfileEducationSchema, emergencyContactSchema, addressSchema, otherSchema, userProfileIdentitySchema } from '../../schemas/profile.schema'
-import { checkCanApply, getUserProfile, upsertAddress, upsertBasicInfo, upsertCvFile, upsertEducation, upsertEmergencyContact, upsertIdentity, upsertOther } from '../../services/profile.service'
+import { checkCanApply, getUserProfile, needAdditionalInfo, upsertAddress, upsertBasicInfo, upsertCvFile, upsertEducation, upsertEmergencyContact, upsertIdentity, upsertOther } from '../../services/profile.service'
 import { processMultipartForm } from '../../utils/fileUpload.util'
 import { deleteFileByUrl } from '../../utils/fileDelete.util'
+import { applicationStatus } from '../../services/application.service'
 
 
 export const profileBasicInfo = async (request: FastifyRequest, reply: FastifyReply) => {
@@ -495,24 +496,23 @@ export const profileEducationInfo = async (request: FastifyRequest, reply: Fasti
 }
 
 export const profileMe = async (request: FastifyRequest, reply: FastifyReply) => {
- try {
-   const userId = (request.user as any)?.userId
-   if (!userId) {
-     return badErrorResponse(reply, 'Unauthorized user')
-   }
+  try {
+    const userId = (request.user as any)?.userId
+    if (!userId) {
+      return badErrorResponse(reply, 'Unauthorized user')
+    }
+    const profile = await getUserProfile(userId)
+    if (!profile) {
+      return badErrorResponse(reply, 'Profile not found')
+    }
+    const canApply = await checkCanApply(userId);
+    const additionalInfo = await needAdditionalInfo(userId);
+    const statusApplication = await applicationStatus(userId);
 
-   const profile = await getUserProfile(userId)
-   
-   if (!profile) {
-     return badErrorResponse(reply, 'Profile not found')
-   }
+    return successResponse(reply, 'Profile retrieved successfully', {canApply,needAdditionalInfo: additionalInfo, applicationStatus: statusApplication, ...profile.toObject()})
 
-   const canApply = await checkCanApply(userId);
-
-   return successResponse(reply, 'Profile retrieved successfully', {canApply, ...profile.toObject()})
-
- } catch (error) {
-   console.error('Get profile error:', error)
-   return serverErrorResponse(reply, 'Failed to retrieve profile')
- }
+  } catch (error) {
+    console.error('Get profile error:', error)
+    return serverErrorResponse(reply, 'Failed to retrieve profile')
+  }
 }

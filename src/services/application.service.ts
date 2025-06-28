@@ -128,3 +128,12 @@ export const getApplicationStats = async () => {
     rejected: stats.find(s => s._id === 'rejected')?.count || 0
   }
 }
+
+export async function applicationStatus(userId: string): Promise<string> {
+  const application = await Application.findOne({ userId }).sort({ updatedAt: -1 }); 
+  if (!application) {
+    throw new Error('Your application not found')
+  }
+  return application.status;
+}
+
