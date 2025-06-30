@@ -509,7 +509,17 @@ export const profileMe = async (request: FastifyRequest, reply: FastifyReply) =>
     const additionalInfo = await needAdditionalInfo(userId);
     const statusApplication = await applicationStatus(userId);
 
-    return successResponse(reply, 'Profile retrieved successfully', {canApply,needAdditionalInfo: additionalInfo, applicationStatus: statusApplication, ...profile.toObject()})
+    const responseData = {
+      canApply,
+      needAdditionalInfo: additionalInfo,
+      ...profile.toObject()
+    }
+
+    if (statusApplication) {
+      responseData.applicationStatus = statusApplication
+    }
+
+    return successResponse(reply, 'Profile retrieved successfully', responseData)
 
   } catch (error) {
     console.error('Get profile error:', error)
