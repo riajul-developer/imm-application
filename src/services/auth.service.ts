@@ -32,7 +32,7 @@ export async function verifyOtp(phoneNumber: string, otp: string, request: any) 
   user.otpExpiry = undefined
   await user.save()
 
-  return request.server.jwt.sign({ userId: user._id, phoneNumber })
+  return request.server.jwt.sign({ userId: user._id, phoneNumber }, { expiresIn: '7d' })
 }
 
 
