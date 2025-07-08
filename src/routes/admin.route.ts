@@ -1,11 +1,7 @@
 import { FastifyInstance } from 'fastify';
-import { registerAdmin } from '../controllers/admin/admin.controller';
+import { loginAdmin, registerAdmin, verifyEmail, forgetAuth, resetAuth } from '../controllers/admin/admin.controller';
 
 export default async function adminRoutes(fastify: FastifyInstance) {
-
-  // fastify.post('/admin/register', adminController.registerAdmin)
-  // fastify.get('/admin/verify-email', adminController.verifyEmail)
-  // fastify.post('/admin/login', adminController.loginAdmin)
   
   // // Protected routes (require authentication)
   // fastify.post('/admin/send-otp', {
@@ -22,4 +18,8 @@ export default async function adminRoutes(fastify: FastifyInstance) {
 
 
   fastify.post('/register', registerAdmin)
+  fastify.get('/verify-email', verifyEmail)
+  fastify.post('/login', loginAdmin)
+  fastify.post('/forget-auth', forgetAuth)
+  fastify.post('/reset-auth', resetAuth)
 }
