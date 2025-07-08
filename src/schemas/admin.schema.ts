@@ -21,5 +21,5 @@ export const forgetAuthSchema = z.object({
 export const resetAuthSchema = z.object({
   email: z.string().email('Invalid email address'),
   password: z.string().min(6, 'Password must be at least 6 characters'),
-  token: z.string().length(64, 'Token must be exactly 64 characters long')
+  token: z.string().length(64, 'Invalid your token')
 })

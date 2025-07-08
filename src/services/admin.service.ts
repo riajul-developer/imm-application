@@ -1,7 +1,7 @@
 import bcrypt from 'bcryptjs'
 import crypto from 'crypto'
 import { Admin, IAdmin } from '../models/admin.model'
-import { sendEmail, sendVerifyEmail } from '../utils/email.util'
+import { sendVerifyEmail } from '../utils/email.util'
 
 export async function registerAdmin(email: string, password: string): Promise<IAdmin> {
 
@@ -104,7 +104,7 @@ export async function forgetAuth(email: string): Promise<boolean> {
   return true
     
 }
-export async function resetAuth(email: string, password: string, token: string, request: any) {
+export async function resetAuth(email: string, password: string, token: string): Promise<IAdmin> {
 
   const admin = await Admin.findOne({
     token,
@@ -117,17 +117,24 @@ export async function resetAuth(email: string, password: string, token: string, 
 
   const hashedPassword = await bcrypt.hash(password, 12)
 
+  const token2 = crypto.randomBytes(32).toString('hex')
+  const tokenExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000) 
+
   admin.email = email
   admin.password = hashedPassword
-  admin.token = undefined
-  admin.tokenExpiry = undefined
+  admin.token = token2
+  admin.isVerified = false
+  admin.tokenExpiry = tokenExpiry
   await admin.save()
 
-  const token2 = request.server.jwt.sign({ 
-    adminId: admin._id, 
-    email: admin.email,
-    role: 'admin'
+  const verificationLink = `${process.env.FRONTEND_URL}/admin/verify-email?token=${token2}`
+
+  await sendVerifyEmail(email, {
+    verificationLink,
+    expiryTime: '24 hours',
+    companyName: process.env.COMPANY_NAME
   })
 
-  return { admin, token2 }
+  return admin
+
 }

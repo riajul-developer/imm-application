@@ -117,25 +117,16 @@ export const forgetAuth = async (request: FastifyRequest, reply: FastifyReply) =
 
 }
 export const resetAuth = async (request: FastifyRequest, reply: FastifyReply) => {
-
   try {
     const { email, password, token } = resetAuthSchema.parse(request.body)
     
-    const { admin, token2 } = await adminService.resetAuth(
+    await adminService.resetAuth(
       email, 
       password,
-      token, 
-      request
+      token
     )
     
-    return successResponse(reply, 'Credential reset successfully.', { 
-      token: token2, 
-      admin: {
-        id: admin._id,
-        email: admin.email,
-        isVerified: admin.isVerified
-      }
-    })
+    return successResponse(reply, 'Reset successfully. Please check your email for verification')
 
   } catch (error) {
 
