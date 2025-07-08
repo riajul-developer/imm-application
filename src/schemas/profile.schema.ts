@@ -104,6 +104,15 @@ export const otherSchema = z.object({
   })
 })
 
+export const workInfoSchema = z.object({
+  employeeId: z.string().min(1, 'Employee ID is required'),
+  projectName: z.string().min(1, 'Project name is required'),
+  branch: z.string().min(1, 'Branch is required'),
+  shift: z.string().min(1, 'Shift is required'),
+  reference: z.string().optional() 
+});
+
+
 export const userProfileEducationSchema = z.object({
   degree: z.string().min(2, 'Degree name must be at least 2 characters'),
   cgpaOrGpa: z.number()

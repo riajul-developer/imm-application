@@ -2,8 +2,8 @@
 import { FastifyRequest, FastifyReply } from 'fastify'
 import { ZodError } from 'zod'
 import { badErrorResponse, serverErrorResponse, successResponse } from '../../utils/response.util'
-import { userProfileBasicInfoSchema, userProfileEducationSchema, emergencyContactSchema, addressSchema, otherSchema, userProfileIdentitySchema } from '../../schemas/profile.schema'
-import { checkCanApply, getUserProfile, needAdditionalInfo, upsertAddress, upsertBasicInfo, upsertCvFile, upsertEducation, upsertEmergencyContact, upsertIdentity, upsertOther } from '../../services/profile.service'
+import { userProfileBasicInfoSchema, userProfileEducationSchema, emergencyContactSchema, addressSchema, otherSchema, userProfileIdentitySchema, workInfoSchema } from '../../schemas/profile.schema'
+import { checkCanApply, getUserProfile, needAdditionalInfo, upsertAddress, upsertBasicInfo, upsertCvFile, upsertEducation, upsertEmergencyContact, upsertIdentity, upsertOther, upsertWorkInfo } from '../../services/profile.service'
 import { processMultipartForm } from '../../utils/fileUpload.util'
 import { deleteFileByUrl } from '../../utils/fileDelete.util'
 import { applicationStatus } from '../../services/application.service'
@@ -391,6 +391,37 @@ export const profileCvUpload = async (request: FastifyRequest, reply: FastifyRep
  } catch (error) {
    console.error('CV upload error:', error)
    return serverErrorResponse(reply, 'Failed to upload CV')
+ }
+}
+
+export const profileWorkInfo = async (request: FastifyRequest, reply: FastifyReply) => {
+
+ try {
+  const userId = (request.user as any)?.userId
+
+  if (!userId) {
+    return badErrorResponse(reply, 'Unauthorized user')
+  }
+
+  const body = request.body as any
+
+  const parsed = workInfoSchema.parse(body)
+
+  const profile = await upsertWorkInfo({
+    userId,
+    workInfo: { ...parsed }
+  })
+
+  return successResponse(reply, 'Work information saved successfully.', profile)
+
+ } catch (error) {
+  if (error instanceof ZodError) {
+    return badErrorResponse(reply, 'Validation failed.', error.errors.map(e => ({
+      path: e.path.join('.'),
+      message: e.message,
+    })))
+  }
+  return serverErrorResponse(reply, 'Failed to save work information.')
  }
 }
 

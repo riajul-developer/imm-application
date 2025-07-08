@@ -1,5 +1,5 @@
 import mongoose from 'mongoose'
-import { UserProfile, IUserProfile, IIdentity, IBasic, IEmergencyContact, IAddress, IOther, ICvFile } from '../models/profile.model'
+import { UserProfile, IUserProfile, IIdentity, IBasic, IEmergencyContact, IAddress, IOther, ICvFile, IWorkInfo } from '../models/profile.model'
 
 type BasicInfoPayload = {
   userId: string
@@ -51,9 +51,9 @@ export interface CvFilePayload {
   cvFile: ICvFile;
 }
 
-interface CanApplyPayload {
+export interface WorkInfoPayload {
   userId: mongoose.Types.ObjectId;
-  canApply: boolean;
+  workInfo: IWorkInfo;
 }
 
 export async function upsertBasicInfo(payload: BasicInfoPayload): Promise<IBasic> {
@@ -127,6 +127,19 @@ export async function upsertCvFile(payload: CvFilePayload): Promise<ICvFile> {
   
   return profile.cvFile
 }
+
+export async function upsertWorkInfo(payload: WorkInfoPayload): Promise<IWorkInfo> {
+  const { userId, workInfo } = payload
+  
+  const profile = await UserProfile.findOneAndUpdate(
+    { userId },
+    { $set: { workInfo } },
+    { upsert: true, new: true }
+  )
+  
+  return profile.workInfo
+}
+
 
 export async function upsertEducation(payload: EducationPayload): Promise<IUserProfile> {
   const { userId, education } = payload

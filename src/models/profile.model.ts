@@ -52,6 +52,15 @@ export interface ICvFile {
   name: string;
   url: string;
 }
+
+export interface IWorkInfo {
+  employeeId: string;
+  projectName: string;
+  branch: string;
+  shift: string;
+  reference?: string;
+}
+
 export interface IUserProfile extends mongoose.Document {
   userId: mongoose.Types.ObjectId
   basic: IBasic
@@ -60,6 +69,7 @@ export interface IUserProfile extends mongoose.Document {
   address: IAddress
   other: IOther
   cvFile: ICvFile
+  workInfo: IWorkInfo
   education: {
     degree: string
     cgpaOrGpa?: number 
@@ -131,6 +141,13 @@ const userProfileSchema = new mongoose.Schema(
     cvFile: {
       name: { type: String },
       url: { type: String }
+    },
+    workInfo: {
+      employeeId: { type: String },
+      projectName: { type: String },
+      branch: { type: String },
+      shift: { type: String },
+      reference: { type: String },
     },
     education: [
       {
