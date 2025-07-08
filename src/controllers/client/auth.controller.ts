@@ -26,7 +26,7 @@ export const verifyOtp = async (request: FastifyRequest, reply: FastifyReply) =>
     const { phoneNumber, otp } = verifyOtpSchema.parse(request.body)
     const token = await authService.verifyOtp(phoneNumber, otp, request)
 
-    const decoded = request.server.jwt.verify(token) as any
+    const decoded: any = request.server.jwt.verify(token)
     const userId = decoded.userId
 
     const profile = await getUserProfile(userId);

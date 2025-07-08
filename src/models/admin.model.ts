@@ -1,13 +1,11 @@
 import { Schema, model, Document } from 'mongoose'
 
-interface IAdmin extends Document {
+export interface IAdmin extends Document {
   email: string
   password: string
-  isEmailVerified: boolean
+  isVerified: boolean
   token?: string
   tokenExpiry?: Date
-  otp?: string
-  otpExpiry?: Date
   createdAt: Date
   updatedAt: Date
 }
@@ -23,14 +21,12 @@ const adminSchema = new Schema<IAdmin>({
     type: String,
     required: true
   },
-  isEmailVerified: {
+  isVerified: {
     type: Boolean,
     default: false
   },
   token: String,
-  tokenExpiry: Date,
-  otp: String,
-  otpExpiry: Date
+  tokenExpiry: Date
 }, {
   timestamps: true
 })

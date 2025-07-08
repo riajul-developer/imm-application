@@ -1,7 +1,7 @@
 import { FastifyInstance } from 'fastify'
 import { sendOtp, verifyOtp } from '../controllers/client/auth.controller'
 import { profileBasicInfo, profileIdentity, profileEducationInfo, profileEmergencyContact, profileAddress, profileOther, profileCvUpload, profileMe } from '../controllers/client/profile.controller'
-import authenticate from '../plugins/auth.plugin'
+import { authenticate } from '../plugins/auth.plugin'
 import { canCompleteProfile, getMyApplication, submitApplication } from '../controllers/client/application.controller'
 
 export default async function clientRoutes(fastify: FastifyInstance) {

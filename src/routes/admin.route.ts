@@ -1,25 +1,18 @@
-import { FastifyInstance } from 'fastify';
-import { registerAdmin } from '../controllers/admin/admin.controller';
+import { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
+import { loginAdmin, registerAdmin, verifyEmail, forgetAuth, resetAuth } from '../controllers/admin/admin.controller';
+import { successResponse } from '../utils/response.util';
+import { authenticateAdmin } from '../plugins/auth.plugin';
 
 export default async function adminRoutes(fastify: FastifyInstance) {
 
-  // fastify.post('/admin/register', adminController.registerAdmin)
-  // fastify.get('/admin/verify-email', adminController.verifyEmail)
-  // fastify.post('/admin/login', adminController.loginAdmin)
-  
-  // // Protected routes (require authentication)
-  // fastify.post('/admin/send-otp', {
-  //   preHandler: [fastify.authenticate]
-  // }, adminController.sendEmailOtp)
-  
-  // fastify.post('/admin/verify-otp', {
-  //   preHandler: [fastify.authenticate]
-  // }, adminController.verifyEmailOtp)
-  
-  // fastify.put('/admin/update-credentials', {
-  //   preHandler: [fastify.authenticate]
-  // }, adminController.updateCredentials)
-
-
   fastify.post('/register', registerAdmin)
+  fastify.get('/verify-email', verifyEmail)
+  fastify.post('/login', loginAdmin)
+  fastify.post('/forget-auth', forgetAuth)
+  fastify.post('/reset-auth', resetAuth)
+
+  fastify.get("/test-auth", { preHandler: authenticateAdmin }, (request: FastifyRequest, reply: FastifyReply) => {
+    return successResponse(reply, 'Test admin middleware successfully')
+  })
+
 }
