@@ -1,5 +1,5 @@
 {
-  "name": "application-form-api",
+  "name": "iimi-backend",
   "version": "1.0.0",
   "description": "Application Form API with OTP verification",
   "main": "dist/server.js",

@@ -1,5 +1,5 @@
 import mongoose from 'mongoose'
-import { UserProfile, IUserProfile, IIdentity, IBasic, IEmergencyContact, IAddress, IOther, ICvFile, IWorkInfo } from '../models/profile.model'
+import { UserProfile, IUserProfile, IIdentity, IBasic, IEmergencyContact, IAddress, IOther, ICvFile, IWorkInfo, IEducation, ITestimonial, IMyVerified, ICommitmentNote } from '../models/profile.model'
 
 type BasicInfoPayload = {
   userId: string
@@ -25,9 +25,34 @@ type EducationPayload = {
     degree: string
     cgpaOrGpa: number
     passingYear: number
-    certificateFiles: { name: string; url: string }[]
-  }[]
+    certificateFile: { name: string; url: string }
+  }
 }
+
+type TestimonialPayload = {
+  userId: string
+  testimonial: {
+    title: string
+    testimonialFile: { name: string; url: string }
+  }
+}
+
+type MyVerifiedPayload = {
+  userId: string
+  myVerified: {
+    title: string
+    myVerifiedFile: { name: string; url: string }
+  }
+}
+
+type CommitmentNotePayload = {
+  userId: string
+  commitmentNote: {
+    title: string
+    commitmentFile: { name: string; url: string }
+  }
+}
+
 export interface EmergencyContactPayload {
  userId: string;
  emergencyContact: {
@@ -141,7 +166,7 @@ export async function upsertWorkInfo(payload: WorkInfoPayload): Promise<IWorkInf
 }
 
 
-export async function upsertEducation(payload: EducationPayload): Promise<IUserProfile> {
+export async function upsertEducation(payload: EducationPayload): Promise<IEducation> {
   const { userId, education } = payload
 
   const profile = await UserProfile.findOneAndUpdate(
@@ -150,7 +175,43 @@ export async function upsertEducation(payload: EducationPayload): Promise<IUserP
     { upsert: true, new: true }
   )
 
-  return profile
+  return profile.education
+}
+
+export async function upsertTestimonial(payload: TestimonialPayload): Promise<ITestimonial> {
+  const { userId, testimonial } = payload
+
+  const profile = await UserProfile.findOneAndUpdate(
+    { userId },
+    { $set: { testimonial } },
+    { upsert: true, new: true }
+  )
+
+  return profile.testimonial
+}
+
+export async function upsertMyVerified(payload: MyVerifiedPayload): Promise<IMyVerified> {
+  const { userId, myVerified } = payload
+
+  const profile = await UserProfile.findOneAndUpdate(
+    { userId },
+    { $set: { myVerified } },
+    { upsert: true, new: true }
+  )
+
+  return profile.myVerified
+}
+
+export async function upsertCommitmentNote(payload: CommitmentNotePayload): Promise<ICommitmentNote> {
+  const { userId, commitmentNote } = payload
+
+  const profile = await UserProfile.findOneAndUpdate(
+    { userId },
+    { $set: { commitmentNote } },
+    { upsert: true, new: true }
+  )
+
+  return profile.commitmentNote
 }
 
 export async function getUserProfile(userId: string): Promise<IUserProfile | null> {

@@ -1,6 +1,6 @@
 import { FastifyInstance } from 'fastify'
 import { sendOtp, verifyOtp } from '../controllers/client/auth.controller'
-import { profileBasicInfo, profileIdentity, profileEducationInfo, profileEmergencyContact, profileAddress, profileOther, profileCvUpload, profileMe, profileWorkInfo } from '../controllers/client/profile.controller'
+import { profileBasicInfo, profileIdentity, profileEducation, profileEmergencyContact, profileAddress, profileOther, profileCvUpload, profileMe, profileWorkInfo, profileTestimonial, profileMyVerified, profileCommitmentNote } from '../controllers/client/profile.controller'
 import { authenticate } from '../plugins/auth.plugin'
 import { canCompleteProfile, getMyApplication, submitApplication } from '../controllers/client/application.controller'
 
@@ -18,10 +18,10 @@ export default async function clientRoutes(fastify: FastifyInstance) {
     fastify.post('/cv-upload', { preHandler: authenticate }, profileCvUpload)
 
     fastify.post('/work-info', { preHandler: authenticate }, profileWorkInfo)
-
-    fastify.post('/education-info', { preHandler: authenticate }, profileEducationInfo)
-
-
+    fastify.post('/education-info', { preHandler: authenticate }, profileEducation)
+    fastify.post('/testimonial-info', { preHandler: authenticate }, profileTestimonial)
+    fastify.post('/my-verified-info', { preHandler: authenticate }, profileMyVerified)
+    fastify.post('/commitment-note', { preHandler: authenticate }, profileCommitmentNote)
 
   }
 
