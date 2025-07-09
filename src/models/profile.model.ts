@@ -8,7 +8,6 @@ export interface IBasic {
   profilePicFile: { name: string; url: string }
 }
 
-
 export interface IIdentity {
   number: string;
   docFiles: Array<{
@@ -52,6 +51,36 @@ export interface ICvFile {
   name: string;
   url: string;
 }
+
+export interface IWorkInfo {
+  employeeId: string;
+  projectName: string;
+  branch: string;
+  shift: string;
+  reference?: string;
+}
+
+export interface IEducation {
+  degree: string;
+  cgpaOrGpa?: number;
+  passingYear: number;
+  certificateFile: { name: string; url: string };
+}
+
+export interface ITestimonial {
+  title: string;
+  testimonialFile: { name: string; url: string };
+}
+
+export interface IMyVerified {
+  title: string;
+  myVerifiedFile: { name: string; url: string };
+}
+
+export interface ICommitmentNote {
+  title: string;
+  commitmentFile: { name: string; url: string };
+}
 export interface IUserProfile extends mongoose.Document {
   userId: mongoose.Types.ObjectId
   basic: IBasic
@@ -60,12 +89,11 @@ export interface IUserProfile extends mongoose.Document {
   address: IAddress
   other: IOther
   cvFile: ICvFile
-  education: {
-    degree: string
-    cgpaOrGpa?: number 
-    passingYear: number
-    certificateFiles: { name: string; url: string }[]
-  }[]
+  workInfo: IWorkInfo
+  education: IEducation
+  testimonial: ITestimonial
+  myVerified: IMyVerified
+  commitmentNote: ICommitmentNote
   createdAt: Date
   updatedAt: Date
 }
@@ -132,27 +160,51 @@ const userProfileSchema = new mongoose.Schema(
       name: { type: String },
       url: { type: String }
     },
-    education: [
-      {
-        degree: { type: String },
-        cgpaOrGpa: { 
-          type: Number,
-          min: 0,
-          max: 5.0 
-        },
-        passingYear: { 
-          type: Number,
-          min: 1950, 
-          max: new Date().getFullYear() + 1 
-        },
-        certificateFiles: [
-          {
-            name: { type: String },
-            url: { type: String }
-          }
-        ]
+    workInfo: {
+      employeeId: { type: String },
+      projectName: { type: String },
+      branch: { type: String },
+      shift: { type: String },
+      reference: { type: String },
+    },
+    education: {
+      degree: { type: String },
+      cgpaOrGpa: { 
+        type: Number,
+        min: 0,
+        max: 5.0 
+      },
+      passingYear: { 
+        type: Number,
+        min: 1950, 
+        max: new Date().getFullYear() + 1 
+      },
+      certificateFile: {
+        name: { type: String },
+        url: { type: String }
       }
-    ],
+    },
+    testimonial: {
+      title: { type: String },
+      testimonialFile: {
+        name: { type: String },
+        url: { type: String }
+      }
+    },
+    myVerified: {
+      title: { type: String },
+      myVerifiedFile: {
+        name: { type: String },
+        url: { type: String }
+      }
+    },
+    commitmentNote: {
+      title: { type: String },
+      commitmentFile: {
+        name: { type: String },
+        url: { type: String }
+      }
+    }
   },
   {
     timestamps: true
