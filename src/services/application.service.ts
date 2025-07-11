@@ -192,3 +192,15 @@ export const updateApplication = async (applicationId: string, data: UpdateStatu
   await application.save();
   return application;
 };
+
+export async function applicationStatus(userId: string): Promise<string> {
+  const latestApplication = await Application.findOne({ userId })
+    .sort({ submittedAt: -1 })
+    .select('status');
+
+  if (!latestApplication) {
+    return 'not-applied'; 
+  }
+
+  return latestApplication.status;
+}
