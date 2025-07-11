@@ -6,8 +6,6 @@ export interface IApplication extends mongoose.Document {
   userId: mongoose.Types.ObjectId
   status: ApplicationStatus
   submittedAt: Date
-  reviewedAt?: Date
-  reviewedBy?: mongoose.Types.ObjectId
   rejectionReason?: string
   adminNotes?: string
   createdAt: Date
@@ -29,13 +27,6 @@ const applicationSchema = new mongoose.Schema(
     submittedAt: {
       type: Date,
       default: Date.now
-    },
-    reviewedAt: {
-      type: Date
-    },
-    reviewedBy: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'User'
     },
     rejectionReason: {
       type: String,

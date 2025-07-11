@@ -1,5 +1,12 @@
+import { FastifyRequest } from 'fastify';
 import { Application, IApplication } from '../models/application.model'
-import { getUserProfile } from './profile.service'
+import { UserProfile } from '../models/profile.model'
+
+interface UpdateStatusInput {
+  status: 'submitted' | 'under-review' | 'approved' | 'rejected';
+  adminNotes?: string;
+  rejectionReason?: string;
+}
 
 export const createApplication = async (userId: string): Promise<IApplication> => {
 
@@ -34,103 +41,154 @@ export const checkUserCanCompleteProfile = async (userId: string): Promise<boole
   return application?.status === 'approved'
 }
 
-export const getAllApplications = async (
-  filter: any = {},
+export async function allApplications(
   page: number = 1,
-  limit: number = 10
-) => {
-  const skip = (page - 1) * limit
+  limit: number = 10,
+  search: string = '',
+  status?: string,
+  appliedFrom?: string,
+  appliedTo?: string
+) {
+  const baseUrl = process.env.BASE_URL;
+  const skip = (page - 1) * limit;
 
-  const applications = await Application.find(filter)
-    .populate('userId', 'phoneNumber')
-    .populate('reviewedBy', 'name')
-    .sort({ submittedAt: -1 })
-    .skip(skip)
-    .limit(limit)
-    .lean()
+  const matchConditions: any[] = [];
 
-  const total = await Application.countDocuments(filter)
+  if (search) {
+    matchConditions.push({
+      $or: [
+        { 'profile.basic.fullName': { $regex: search, $options: 'i' } },
+        { 'profile.basic.email': { $regex: search, $options: 'i' } },
+        { 'profile.basic.phone': { $regex: search, $options: 'i' } }
+      ]
+    });
+  }
+
+  if (status) {
+    matchConditions.push({ status: status });
+  }
+
+  if (appliedFrom || appliedTo) {
+    const dateFilter: any = {};
+    if (appliedFrom) dateFilter.$gte = new Date(appliedFrom);
+    if (appliedTo) dateFilter.$lte = new Date(appliedTo);
+    matchConditions.push({ submittedAt: dateFilter });
+  }
+
+  const matchStage = matchConditions.length > 0 ? { $match: { $and: matchConditions } } : null;
+
+  const aggregationPipeline: any[] = [
+    { $sort: { submittedAt: -1 } },
+    {
+      $lookup: {
+        from: 'userprofiles',
+        localField: 'userId',
+        foreignField: 'userId',
+        as: 'profile'
+      }
+    },
+    { $unwind: { path: '$profile', preserveNullAndEmptyArrays: true } }
+  ];
+
+  if (matchStage) aggregationPipeline.push(matchStage);
+
+  aggregationPipeline.push(
+    { $skip: skip },
+    { $limit: limit },
+    {
+      $project: {
+        name: '$profile.basic.fullName',
+        email: '$profile.basic.email',
+        phone: '$profile.basic.phone',
+        profileImage: '$profile.basic.profilePicFile.url',
+        submittedDate: '$submittedAt',
+        status: 1,        
+        adminNotes: 1,
+        rejectionReason: 1
+      }
+    }
+  );
+
+  const applications = await Application.aggregate(aggregationPipeline);
+
+  const countPipeline: any[] = [
+    {
+      $lookup: {
+        from: 'userprofiles',
+        localField: 'userId',
+        foreignField: 'userId',
+        as: 'profile'
+      }
+    },
+    { $unwind: { path: '$profile', preserveNullAndEmptyArrays: true } }
+  ];
+  if (matchStage) countPipeline.push(matchStage);
+  countPipeline.push({ $count: 'total' });
+
+  const countResult = await Application.aggregate(countPipeline);
+  const total = countResult[0]?.total || 0;
+
+  const totalPages = Math.ceil(total / limit);
+  const hasNextPage = page < totalPages;
+  const hasPrevPage = page > 1;
+
+  const params = {
+  page: String(page),
+  limit: String(limit),
+    ...(search ? { search } : {}),
+    ...(status ? { status } : {}),
+    ...(appliedFrom ? { appliedFrom } : {}),
+    ...(appliedTo ? { appliedTo } : {})
+  };
+
+  const queryParams = new URLSearchParams(params);
+
+  const links = {
+    self: `${baseUrl}?${queryParams.toString()}`,
+    next: hasNextPage ? `${baseUrl}?${new URLSearchParams({ ...params, page: String(page + 1) }).toString()}` : null,
+    prev: hasPrevPage ? `${baseUrl}?${new URLSearchParams({ ...params, page: String(page - 1) }).toString()}` : null
+  };
 
   return {
-    applications,
-    pagination: {
-      current: page,
-      total: Math.ceil(total / limit),
-      hasNext: skip + applications.length < total,
-      hasPrev: page > 1
-    }
-  }
+    meta: {
+      total,
+      page,
+      limit,
+      totalPages,
+      hasNextPage,
+      hasPrevPage,
+      links
+    },
+    applications
+  };
 }
 
-export const getApplicationById = async (id: string) => {
-  const application = await Application.findById(id)
-    .populate('userId', 'phoneNumber')
-    .populate('reviewedBy', 'name')
+export async function getApplicationById(applicationId: string) {
+  const application = await Application.findById(applicationId);
+  if (!application) return null;
 
-  if (!application) {
-    throw new Error('Application not found')
-  }
-
-  const profile = await getUserProfile(application.userId.toString())
+  const profile = await UserProfile.findOne({ userId: application.userId });
 
   return {
     application,
-    profile
-  }
+    profile: profile || null,
+  };
 }
 
-export const reviewApplication = async (
-  id: string,
-  adminUserId: string,
-  status: 'approved' | 'rejected',
-  adminNotes?: string,
-  rejectionReason?: string
-): Promise<IApplication> => {
-  const application = await Application.findById(id)
-
+export const updateApplication = async (applicationId: string, data: UpdateStatusInput) => {
+  const application = await Application.findById(applicationId);
   if (!application) {
-    throw new Error('Application not found')
+    throw new Error('Application not found');
   }
 
-  if (application.status === 'approved' || application.status === 'rejected') {
-    throw new Error('Application already reviewed')
+  application.status = data.status;
+  if (data.adminNotes) application.adminNotes = data.adminNotes;
+  if (data.status === 'rejected') {
+    application.rejectionReason = data.rejectionReason ?? '';
+  } else {
+    application.rejectionReason = undefined;
   }
 
-  application.status = status
-  application.reviewedAt = new Date()
-  application.reviewedBy = adminUserId as any
-  application.adminNotes = adminNotes
-  
-  if (status === 'rejected' && rejectionReason) {
-    application.rejectionReason = rejectionReason
-  }
-
-  return await application.save()
-}
-
-export const getApplicationStats = async () => {
-  const stats = await Application.aggregate([
-    {
-      $group: {
-        _id: '$status',
-        count: { $sum: 1 }
-      }
-    }
-  ])
-
-  const total = await Application.countDocuments()
-
-  return {
-    total,
-    submitted: stats.find(s => s._id === 'submitted')?.count || 0,
-    'under-review': stats.find(s => s._id === 'under-review')?.count || 0,
-    approved: stats.find(s => s._id === 'approved')?.count || 0,
-    rejected: stats.find(s => s._id === 'rejected')?.count || 0
-  }
-}
-
-export async function applicationStatus(userId: string): Promise<string | undefined> {
-  const application: any = await Application.findOne({ userId }).sort({ updatedAt: -1 }); 
-  return application?.status;
-}
-
+  await application.save();
+  return application;
+};
