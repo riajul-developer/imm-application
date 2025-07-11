@@ -1,5 +1,6 @@
 import mongoose from 'mongoose'
 import { UserProfile, IUserProfile, IIdentity, IBasic, IEmergencyContact, IAddress, IOther, ICvFile, IWorkInfo, IEducation, ITestimonial, IMyVerified, ICommitmentNote } from '../models/profile.model'
+import { Application } from '../models/application.model'
 
 type BasicInfoPayload = {
   userId: string
@@ -254,15 +255,71 @@ export async function checkCanApply(userId: string): Promise<boolean> {
 
     const hasCvFile = profile.cvFile?.name && profile.cvFile?.url;
 
-    return Boolean(hasBasicInfo &&
-               hasIdentity &&
-               hasEmergencyContact &&
-               hasPresentAddress &&
-               hasPermanentAddress &&
-               hasOtherInfo &&
-               hasCvFile);
+    const isProfileComplete = Boolean(
+      hasBasicInfo &&
+      hasIdentity &&
+      hasEmergencyContact &&
+      hasPresentAddress &&
+      hasPermanentAddress &&
+      hasOtherInfo &&
+      hasCvFile
+    );
+
+    if (!isProfileComplete) return false;
+
+    const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+
+    const recentApplication = await Application.findOne({
+      userId,
+      submittedAt: { $gte: twentyFourHoursAgo }
+    });
+
+    if (recentApplication) {
+      return false;
+    }
+
+  return true;
 }
 
 export async function needAdditionalInfo(userId: string): Promise<boolean> {
-  return true;
+  const profile = await UserProfile.findOne({ userId })
+
+  if (!profile) return false;
+
+  const approvedApplication = await Application.findOne({ userId, status: 'approved' })
+  if (!approvedApplication) return false
+
+  const workInfoValid = profile.workInfo?.employeeId &&
+    profile.workInfo?.projectName &&
+    profile.workInfo?.branch &&
+    profile.workInfo?.shift &&
+    profile.workInfo?.reference
+
+  const educationValid = profile.education?.degree &&
+    profile.education?.cgpaOrGpa !== undefined &&
+    profile.education?.passingYear &&
+    profile.education?.certificateFile?.name &&
+    profile.education?.certificateFile?.url
+
+  const testimonialValid = profile.testimonial?.title &&
+    profile.testimonial?.testimonialFile?.name &&
+    profile.testimonial?.testimonialFile?.url
+
+  const myVerifiedValid = profile.myVerified?.title &&
+    profile.myVerified?.myVerifiedFile?.name &&
+    profile.myVerified?.myVerifiedFile?.url
+
+  const commitmentNoteValid = profile.commitmentNote?.title &&
+    profile.commitmentNote?.commitmentFile?.name &&
+    profile.commitmentNote?.commitmentFile?.url
+
+  const allValid = Boolean(
+    workInfoValid &&
+    educationValid &&
+    testimonialValid &&
+    myVerifiedValid &&
+    commitmentNoteValid
+  )
+
+  return !allValid
 }
