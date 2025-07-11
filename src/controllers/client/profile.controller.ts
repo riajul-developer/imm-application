@@ -6,7 +6,6 @@ import { userBasicInfoSchema, emergencyContactSchema, addressSchema, otherSchema
 import { checkCanApply, getUserProfile, needAdditionalInfo, upsertAddress, upsertBasicInfo, upsertCommitmentNote, upsertCvFile, upsertEducation, upsertEmergencyContact, upsertIdentity, upsertMyVerified, upsertOther, upsertTestimonial, upsertWorkInfo } from '../../services/profile.service'
 import { processMultipartForm } from '../../utils/fileUpload.util'
 import { deleteFileByUrl } from '../../utils/fileDelete.util'
-import { applicationStatus } from '../../services/application.service'
 
 
 export const profileBasicInfo = async (request: FastifyRequest, reply: FastifyReply) => {
@@ -747,7 +746,7 @@ export const profileMe = async (request: FastifyRequest, reply: FastifyReply) =>
     }
     const canApplication = await checkCanApply(userId);
     const additionalInfo = await needAdditionalInfo(userId);
-    const statusApplication = await applicationStatus(userId);
+    // const statusApplication = await applicationStatus(userId);
 
     const responseData = {
       canApplication,
@@ -755,8 +754,8 @@ export const profileMe = async (request: FastifyRequest, reply: FastifyReply) =>
       ...profile.toObject()
     }
 
-    if (statusApplication) {
-      responseData.applicationStatus = statusApplication
+    if (true) {
+      responseData.applicationStatus = true
     }
 
     return successResponse(reply, 'Profile retrieved successfully', responseData)
