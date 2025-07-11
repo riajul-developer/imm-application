@@ -16,7 +16,7 @@ export const registerAdmin = async (request: FastifyRequest, reply: FastifyReply
     
     await adminService.registerAdmin(email, password)
     
-    return successResponse(reply, 'Registered successfully. Please check your email for verification')
+    return successResponse(reply, 'Registered successfully. Please check your email for verification!')
   } catch (error) {
     if (error instanceof ZodError) {
       return badErrorResponse(reply, 'Validation failed', error.errors.map(e => ({
@@ -96,7 +96,7 @@ export const forgetAuth = async (request: FastifyRequest, reply: FastifyReply) =
 
     await adminService.forgetAuth(email)
 
-    return successResponse(reply, 'Email sent successfully. Please check your email for verification');
+    return successResponse(reply, 'Email sent successfully. Please check your email for verification!');
 
   } catch (error) {
 
@@ -126,7 +126,7 @@ export const resetAuth = async (request: FastifyRequest, reply: FastifyReply) =>
       token
     )
     
-    return successResponse(reply, 'Reset successfully. Please check your email for verification')
+    return successResponse(reply, 'Reset successfully. Please check your email for verification!')
 
   } catch (error) {
 
