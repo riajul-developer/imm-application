@@ -21,10 +21,10 @@ export const submitApplication = async (request: FastifyRequest, reply: FastifyR
       return badErrorResponse(reply, 'Please fill up some profile information first')
     }
 
-    const hasAnyData = profile.basic || profile.identity || profile.address ||
-                      profile.emergencyContact || profile.other || profile.cvFile
+    const hasFirstPhaseData = profile.basic && profile.identity && profile.address &&
+                      profile.emergencyContact && profile.other && profile.cvFile
 
-    if (!hasAnyData) {
+    if (!hasFirstPhaseData) {
       return badErrorResponse(reply, 'Please fill up at least some profile information before applying')
     }
 
