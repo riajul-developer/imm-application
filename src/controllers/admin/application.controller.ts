@@ -1,49 +1,88 @@
-export const reviewApplicationAdmin = async (request: FastifyRequest, reply: FastifyReply) => {
-  try {
-    const adminUserId = (request.user as any)?.userId
-    const { id } = (request.params as any)
+import { FastifyRequest, FastifyReply } from 'fastify'
+import * as applicationService from '../../services/application.service'
+import { badErrorResponse, notFoundResponse, serverErrorResponse, successResponse } from '../../utils/response.util'
+import { updateStatusSchema } from '../../schemas/application.schema';
+import { ZodError } from 'zod';
 
-    if (!adminUserId) {
-      return badErrorResponse(reply, 'Unauthorized user')
+export const getApplications = async (request: FastifyRequest, reply: FastifyReply) => {
+  try {
+    const {
+      page = 1,
+      limit = 10,
+      search = '',
+      status,
+      appliedFrom,
+      appliedTo
+    } = request.query as {
+      page?: number;
+      limit?: number;
+      search?: string;
+      status?: string;
+      appliedFrom?: string;
+      appliedTo?: string;
+    };
+
+    const applications = await applicationService.allApplications(
+      Number(page),
+      Number(limit),
+      search,
+      status,
+      appliedFrom,
+      appliedTo
+    );
+
+    return successResponse(reply, 'Applications data retrieved successfully.', applications);
+  } catch (error) {
+    return serverErrorResponse(reply, 'Something went wrong.');
+  }
+};
+
+
+export const getApplication = async (
+  request: FastifyRequest<{ Params: { id: string } }>,
+  reply: FastifyReply
+) => {
+  try {
+    const { id } = request.params;
+    const data = await applicationService.getApplicationById(id);
+
+    if (!data) {
+      return notFoundResponse(reply, 'Application not found');
     }
 
-    const { status, adminNotes, rejectionReason } = reviewApplicationSchema.parse(request.body)
-
-    const application = await reviewApplication(id, adminUserId, status, adminNotes, rejectionReason)
-
-    const message = status === 'approved' 
-      ? 'Application approved successfully' 
-      : 'Application rejected successfully'
-
-    return successResponse(reply, message, application)
+    return successResponse(reply, 'Application fetched successfully.', data);
 
   } catch (error) {
+    return serverErrorResponse(reply, 'Something went wrong.');
+  }
+};
+
+export const updateApplication = async (request: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) => {
+  try {
+    const parsed = updateStatusSchema.parse(request.body);
+    const { id } = request.params;
+
+    const updatedApplication = await applicationService.updateApplication(id, {
+      status: parsed.status,
+      adminNotes: parsed.adminNotes,
+      rejectionReason: parsed.status === 'rejected' ? parsed.rejectionReason : undefined,
+    });
+
+    return successResponse(reply, 'Application status updated successfully.', updatedApplication);
+
+  } catch (error) {
+
     if (error instanceof ZodError) {
-      return badErrorResponse(reply, 'Validation failed', error.errors.map(e => ({
+      return badErrorResponse(reply, 'Validation failed.', error.errors.map(e => ({
         path: e.path.join('.'),
-        message: e.message,
-      })))
+        message: e.message
+      })));
     }
-    if (error instanceof Error && (
-      error.message === 'Application not found' || 
-      error.message === 'Application already reviewed'
-    )) {
+
+    if (error instanceof Error) {
       return badErrorResponse(reply, error.message)
     }
-    console.error('Review application error:', error)
-    return serverErrorResponse(reply, 'Failed to review application')
+
+    return serverErrorResponse(reply, 'Failed to update application status');
   }
-}
-
-// Get application statistics (Admin only)
-export const getApplicationStatsAdmin = async (request: FastifyRequest, reply: FastifyReply) => {
-  try {
-    const stats = await getApplicationStats()
-
-    return successResponse(reply, 'Application statistics retrieved', stats)
-
-  } catch (error) {
-    console.error('Get application stats error:', error)
-    return serverErrorResponse(reply, 'Failed to retrieve application statistics')
-  }
-}
+};
