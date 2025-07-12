@@ -221,62 +221,62 @@ export async function getUserProfile(userId: string): Promise<IUserProfile | nul
 }
 
 export async function checkCanApply(userId: string): Promise<boolean> {
-    const profile = await UserProfile.findOne({ userId });
-    
-    if (!profile) {
-      return false;
-    }
+  const profile = await UserProfile.findOne({ userId });
+  
+  if (!profile) {
+    return false;
+  }
 
-    const hasBasicInfo = profile.basic?.fullName && 
-                      profile.basic?.dateOfBirth && 
-                      profile.basic?.phone &&
-                      profile.basic?.profilePicFile?.name &&
-                      profile.basic?.profilePicFile?.url;
+  const hasBasicInfo = profile.basic?.fullName && 
+                    profile.basic?.dateOfBirth && 
+                    profile.basic?.phone &&
+                    profile.basic?.profilePicFile?.name &&
+                    profile.basic?.profilePicFile?.url;
 
-    const hasIdentity = profile.identity?.number && 
-                      profile.identity?.docFiles?.length >= 1; 
+  const hasIdentity = profile.identity?.number && 
+                    profile.identity?.docFiles?.length >= 1; 
 
-    const hasEmergencyContact = profile.emergencyContact?.name && 
-                      profile.emergencyContact?.phone;
+  const hasEmergencyContact = profile.emergencyContact?.name && 
+                    profile.emergencyContact?.phone;
 
-    const hasPresentAddress = profile.address?.present?.district && 
-                      profile.address?.present?.upazila && 
-                      profile.address?.present?.street;
+  const hasPresentAddress = profile.address?.present?.district && 
+                    profile.address?.present?.upazila && 
+                    profile.address?.present?.street;
 
-    const hasPermanentAddress = profile.address?.permanent?.district && 
-                      profile.address?.permanent?.upazila && 
-                      profile.address?.permanent?.street;
+  const hasPermanentAddress = profile.address?.permanent?.district && 
+                    profile.address?.permanent?.upazila && 
+                    profile.address?.permanent?.street;
 
-    const hasOtherInfo = profile.other?.fathersName && 
-                        profile.other?.mothersName && 
-                        profile.other?.religion && 
-                        profile.other?.gender && 
-                        profile.other?.maritalStatus;
+  const hasOtherInfo = profile.other?.fathersName && 
+                      profile.other?.mothersName && 
+                      profile.other?.religion && 
+                      profile.other?.gender && 
+                      profile.other?.maritalStatus;
 
-    const hasCvFile = profile.cvFile?.name && profile.cvFile?.url;
+  const hasCvFile = profile.cvFile?.name && profile.cvFile?.url;
 
-    const isProfileComplete = Boolean(
-      hasBasicInfo &&
-      hasIdentity &&
-      hasEmergencyContact &&
-      hasPresentAddress &&
-      hasPermanentAddress &&
-      hasOtherInfo &&
-      hasCvFile
-    );
+  const isProfileComplete = Boolean(
+    hasBasicInfo &&
+    hasIdentity &&
+    hasEmergencyContact &&
+    hasPresentAddress &&
+    hasPermanentAddress &&
+    hasOtherInfo &&
+    hasCvFile
+  );
 
-    if (!isProfileComplete) return false;
+  if (!isProfileComplete) return false;
 
-    const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+  const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
 
-    const recentApplication = await Application.findOne({
-      userId,
-      submittedAt: { $gte: twentyFourHoursAgo }
-    });
+  const recentApplication = await Application.findOne({
+    userId,
+    submittedAt: { $gte: twentyFourHoursAgo }
+  });
 
-    if (recentApplication) {
-      return false;
-    }
+  if (recentApplication) {
+    return false;
+  }
 
   return true;
 }
