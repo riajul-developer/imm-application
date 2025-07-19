@@ -17,6 +17,7 @@ const isAtLeast18 = (dateStr: string) => {
 export const userBasicInfoSchema = z.object({
   fullName: z.string().min(2, 'Full name must be at least 2 characters'),
   email: z.string().email('Invalid email address'),
+  educationLevel: z.string().min(2, 'Education level must be at least 2 characters'),
   dateOfBirth: z
     .string()
     .refine((date) => !isNaN(Date.parse(date)), {

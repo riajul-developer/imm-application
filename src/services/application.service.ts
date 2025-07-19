@@ -1,4 +1,3 @@
-import { FastifyRequest } from 'fastify';
 import { Application, IApplication } from '../models/application.model'
 import { UserProfile } from '../models/profile.model'
 
