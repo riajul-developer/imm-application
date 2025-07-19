@@ -5,6 +5,7 @@ export interface IBasic {
   phone: string
   email: string
   dateOfBirth: Date
+  educationLevel: string,
   profilePicFile: { name: string; url: string }
 }
 
@@ -111,6 +112,7 @@ const userProfileSchema = new mongoose.Schema(
       phone: { type: String },
       email: { type: String },
       dateOfBirth: { type: Date },
+      educationLevel: { type: String },
       profilePicFile: {
         name: { type: String },
         url: { type: String }

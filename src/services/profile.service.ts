@@ -8,6 +8,7 @@ type BasicInfoPayload = {
     fullName: string
     phone: string
     email: string
+    educationLevel: string
     profilePicFile?: { name: string; url: string }
   }
 }
