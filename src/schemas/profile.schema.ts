@@ -62,6 +62,10 @@ export const otherSchema = z.object({
   })
 })
 
+export const uploadFileSchema = z.object({
+  name: z.enum(['cv', 'testimonial', 'myVerified', 'commitment']),
+})
+
 export const workInfoSchema = z.object({
   employeeId: z.string().min(1, 'Employee ID is required'),
   projectName: z.string().min(1, 'Project name is required'),

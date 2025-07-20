@@ -48,7 +48,7 @@ export interface IOther {
   maritalStatus: MaritalStatus;
 }
 
-export interface ICvFile {
+export interface IFile {
   name: string;
   url: string;
 }
@@ -61,27 +61,20 @@ export interface IWorkInfo {
   reference?: string;
 }
 
-export interface IEducation {
-  degree: string;
-  cgpaOrGpa?: number;
-  passingYear: number;
-  certificateFile: { name: string; url: string };
+export interface IEducationFiles {
+  sscCertFile: IFile;
+  lastCertFile: IFile;
+}
+export interface INdaFiles {
+  firstPageFile: IFile;
+  secondPageFile: IFile;
 }
 
-export interface ITestimonial {
-  title: string;
-  testimonialFile: { name: string; url: string };
+export interface IAgreementFiles {
+  firstPageFile: IFile;
+  secondPageFile: IFile;
 }
 
-export interface IMyVerified {
-  title: string;
-  myVerifiedFile: { name: string; url: string };
-}
-
-export interface ICommitmentNote {
-  title: string;
-  commitmentFile: { name: string; url: string };
-}
 export interface IUserProfile extends mongoose.Document {
   userId: mongoose.Types.ObjectId
   basic: IBasic
@@ -89,12 +82,14 @@ export interface IUserProfile extends mongoose.Document {
   emergencyContact: IEmergencyContact
   address: IAddress
   other: IOther
-  cvFile: ICvFile
+  cvFile: IFile
   workInfo: IWorkInfo
-  education: IEducation
-  testimonial: ITestimonial
-  myVerified: IMyVerified
-  commitmentNote: ICommitmentNote
+  educationFiles: IEducationFiles
+  testimonialFile: IFile
+  myVerifiedFile: IFile
+  commitmentFile: IFile
+  ndaFiles: INdaFiles
+  agreementFiles: IAgreementFiles
   createdAt: Date
   updatedAt: Date
 }
@@ -169,44 +164,48 @@ const userProfileSchema = new mongoose.Schema(
       shift: { type: String },
       reference: { type: String },
     },
-    education: {
-      degree: { type: String },
-      cgpaOrGpa: { 
-        type: Number,
-        min: 0,
-        max: 5.0 
+    educationFiles: {
+      sscCertFile: {
+        name: { type: String },
+        url: { type: String }
       },
-      passingYear: { 
-        type: Number,
-        min: 1950, 
-        max: new Date().getFullYear() + 1 
+      lastCertFile: {
+        name: { type: String },
+        url: { type: String }
+      }
+    },
+    testimonialFile: {
+      name: { type: String },
+      url: { type: String }
+    },
+    myVerifiedFile: {
+      name: { type: String },
+      url: { type: String }
+    },
+    commitmentFile: {
+      name: { type: String },
+      url: { type: String }
+    },
+    ndaFiles: {
+      firstPageFile: {
+        name: { type: String },
+        url: { type: String }
       },
-      certificateFile: {
+      secondPageFile: {
         name: { type: String },
         url: { type: String }
       }
     },
-    testimonial: {
-      title: { type: String },
-      testimonialFile: {
+    agreementFiles: {
+      firstPageFile: {
+        name: { type: String },
+        url: { type: String }
+      },
+      secondPageFile: {
         name: { type: String },
         url: { type: String }
       }
     },
-    myVerified: {
-      title: { type: String },
-      myVerifiedFile: {
-        name: { type: String },
-        url: { type: String }
-      }
-    },
-    commitmentNote: {
-      title: { type: String },
-      commitmentFile: {
-        name: { type: String },
-        url: { type: String }
-      }
-    }
   },
   {
     timestamps: true

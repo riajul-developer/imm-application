@@ -2,8 +2,11 @@
 import { FastifyRequest, FastifyReply } from 'fastify'
 import { ZodError } from 'zod'
 import { badErrorResponse, serverErrorResponse, successResponse } from '../../utils/response.util'
-import { userBasicInfoSchema, emergencyContactSchema, addressSchema, otherSchema, userIdentitySchema, workInfoSchema, userEducationSchema, userTestimonialSchema, userMyVerifiedSchema, userCommitmentNoteSchema } from '../../schemas/profile.schema'
-import { checkCanApply, getUserProfile, needAdditionalInfo, upsertAddress, upsertBasicInfo, upsertCommitmentNote, upsertCvFile, upsertEducation, upsertEmergencyContact, upsertIdentity, upsertMyVerified, upsertOther, upsertTestimonial, upsertWorkInfo } from '../../services/profile.service'
+import { userBasicInfoSchema, emergencyContactSchema, addressSchema, otherSchema, userIdentitySchema, workInfoSchema} from '../../schemas/profile.schema'
+import { 
+  checkCanApply, getUserProfile, needAdditionalInfo, upsertAddress, upsertAgreementFiles, upsertBasicInfo, upsertCommitmentFile, upsertCvFile,
+  upsertEducationFiles, upsertEmergencyContact, upsertIdentity, upsertMyVerifiedFile, upsertNdaFiles, upsertOther, upsertTestimonialFile, upsertWorkInfo 
+} from '../../services/profile.service'
 import { processMultipartForm } from '../../utils/fileUpload.util'
 import { deleteFileByUrl } from '../../utils/fileDelete.util'
 import { applicationStatus } from '../../services/application.service'
@@ -323,17 +326,24 @@ export const profileCvUpload = async (request: FastifyRequest, reply: FastifyRep
     }
 
     let uploadedFile: { name: string; url: string } | null = null
-    let oldCvFile: { name: string; url: string } | null | undefined = undefined
+    let oldFile: { name: string; url: string } | null | undefined = undefined
 
     const existingProfile = await getUserProfile(userId)
-    oldCvFile = existingProfile?.cvFile
+    oldFile = existingProfile?.cvFile
 
     const { uploadResult } = await processMultipartForm(
       request,
       ['cvFile'],
       {
         maxSize: 5 * 1024 * 1024, 
-        allowedTypes: ['image/jpeg', 'image/png', 'image/webp', 'application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'],
+        allowedTypes: [
+          'image/jpeg', 
+          'image/png', 
+          'image/webp', 
+          'application/pdf', 
+          'application/msword', 
+          'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+        ],
         uploadDir: 'uploads/profile/CVs'
       }
     )
@@ -351,8 +361,8 @@ export const profileCvUpload = async (request: FastifyRequest, reply: FastifyRep
         url: uploadResult.files[0].url
       }
 
-      if ((oldCvFile && uploadedFile) && oldCvFile.url !== uploadedFile.url) {
-        await deleteFileByUrl(oldCvFile.url, 'uploads/profile/CVs')
+      if ((oldFile && uploadedFile) && oldFile.url !== uploadedFile.url) {
+        await deleteFileByUrl(oldFile.url, 'uploads/profile/CVs')
       }
 
     } else {
@@ -372,7 +382,6 @@ export const profileCvUpload = async (request: FastifyRequest, reply: FastifyRep
     return successResponse(reply, 'Profile CV uploaded successfully', {canApplication, ...profile})
 
   } catch (error) {
-    console.error('CV upload error:', error)
     return serverErrorResponse(reply, 'Failed to upload CV')
   }
 }
@@ -407,331 +416,471 @@ export const profileWorkInfo = async (request: FastifyRequest, reply: FastifyRep
   }
 }
 
-export const profileEducation = async (request: FastifyRequest, reply: FastifyReply) => {
-    
-  let uploadedFile: { name: string; url: string } | null = null
-
+export const educationFilesUpload = async (request: FastifyRequest, reply: FastifyReply) => {
   try {
-    const contentType = request.headers['content-type'] || ''
-    const isMultipart = contentType.includes('multipart/form-data')
-
     const userId = (request.user as any)?.userId
     if (!userId) {
       return badErrorResponse(reply, 'Unauthorized user')
     }
 
-    let parsed: any = {}
-
-    if (isMultipart) {
-      const { body: formBody, uploadResult } = await processMultipartForm(
-        request,
-        ['certificateFile'],
-        {
-          maxSize: 5 * 1024 * 1024, 
-          allowedTypes: ['image/jpeg', 'image/png', 'image/webp', 'application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'],
-          uploadDir: 'uploads/profile/educations'
-        }
-      )
-
-      if (!uploadResult.success) {
-        if (uploadResult.files[0]) {
-          if (uploadResult.files[0].url) {
-            await deleteFileByUrl(uploadResult.files[0].url, 'uploads/profile/educations');
-          }
-        }
-        if (uploadResult.validationErrors) {
-          return badErrorResponse(reply, 'Validation failed', uploadResult.validationErrors)
-        }
-        return serverErrorResponse(reply, uploadResult.error || 'File upload failed')
-      }
-
-      uploadedFile = { name: uploadResult.files[0].name, url: uploadResult.files[0].url }
-
-      parsed = userEducationSchema.parse(formBody)
-
-    } else {
-      parsed = userEducationSchema.parse(request.body)
-    }
-
-    let oldFile: { name: string; url: string } | null | undefined = undefined
+    let uploadedSscCertFile: { name: string; url: string } | null = null
+    let uploadedLastCertFile: { name: string; url: string } | null = null
+    let oldSscCertFile: { name: string; url: string } | null | undefined = undefined
+    let oldLastCertFile: { name: string; url: string } | null | undefined = undefined
 
     const existingProfile = await getUserProfile(userId)
-    oldFile = existingProfile?.education?.certificateFile
+    oldSscCertFile = existingProfile?.educationFiles?.sscCertFile
+    oldLastCertFile = existingProfile?.educationFiles?.lastCertFile
 
-    if ((oldFile && uploadedFile) && oldFile.url !== uploadedFile.url) {
-      await deleteFileByUrl(oldFile.url, 'uploads/profile/educations')
+    const { uploadResult } = await processMultipartForm(
+      request,
+      ['sscCertFile', 'lastCertFile'],
+      {
+        maxSize: 5 * 1024 * 1024, // 5MB
+        allowedTypes: [
+          'image/jpeg', 
+          'image/png', 
+          'image/webp',
+          'application/pdf',
+          'application/msword',
+          'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+        ],
+        uploadDir: 'uploads/profile/educations'
+      }
+    )
+
+    if (!uploadResult.success) {
+      if (uploadResult.validationErrors) {
+        return badErrorResponse(reply, 'Validation failed', uploadResult.validationErrors)
+      }
+      return serverErrorResponse(reply, uploadResult.error || 'File upload failed')
     }
 
-    const profile = await upsertEducation({
-      userId,
-      education: {
-        ...parsed,
-        certificateFile: uploadedFile || oldFile || undefined,
+    const sscCertFileData = uploadResult.files.find(file => file.fieldname === 'sscCertFile')
+    const lastCertFileData = uploadResult.files.find(file => file.fieldname === 'lastCertFile')
+
+    if (!sscCertFileData && !oldSscCertFile) {
+
+      if (lastCertFileData) {
+        await deleteFileByUrl(lastCertFileData.url, 'uploads/profile/educations')
       }
+
+      return badErrorResponse(reply, 'Validation failed', [{
+        path: 'sscCertFile',
+        message: 'SSC certificate file is required'
+      }])
+      
+    }
+
+    if (sscCertFileData) {
+      uploadedSscCertFile = {
+        name: sscCertFileData.name,
+        url: sscCertFileData.url
+      }
+
+      if ((oldSscCertFile && uploadedSscCertFile) && oldSscCertFile.url !== uploadedSscCertFile.url) {
+        await deleteFileByUrl(oldSscCertFile.url, 'uploads/profile/educations')
+      }
+    }
+
+    if (lastCertFileData) {
+      uploadedLastCertFile = {
+        name: lastCertFileData.name,
+        url: lastCertFileData.url
+      }
+
+      if ((oldLastCertFile && uploadedLastCertFile) && oldLastCertFile.url !== uploadedLastCertFile.url) {
+        await deleteFileByUrl(oldLastCertFile.url, 'uploads/profile/educations')
+      }
+    }
+
+    const educationFiles = {
+      sscCertFile: uploadedSscCertFile || oldSscCertFile ,
+      lastCertFile: uploadedLastCertFile || oldLastCertFile || undefined
+    }
+
+    const profile = await upsertEducationFiles({
+      userId,
+      educationFiles
     })
 
-    return successResponse(reply, 'Education info saved successfully', profile)
+    return successResponse(reply, 'Education files uploaded successfully', profile)
 
   } catch (error) {
-
-    if (uploadedFile) {
-      await deleteFileByUrl(uploadedFile.url, 'uploads/profile/educations')
-    }
-
-    if (error instanceof ZodError) {
-      return badErrorResponse(reply, 'Validation failed.', error.errors.map(e => ({
-        path: e.path.join('.'),
-        message: e.message,
-      })))
-    }
-
-    return serverErrorResponse(reply, 'Failed to save education info')
+    return serverErrorResponse(reply, 'Failed to upload education files')
   }
 }
 
-export const profileTestimonial = async (request: FastifyRequest, reply: FastifyReply) => {
-    
-  let uploadedFile: { name: string; url: string } | null = null
-
+export const testimonialUpload = async (request: FastifyRequest, reply: FastifyReply) => {
   try {
-    const contentType = request.headers['content-type'] || ''
-    const isMultipart = contentType.includes('multipart/form-data')
-
     const userId = (request.user as any)?.userId
     if (!userId) {
       return badErrorResponse(reply, 'Unauthorized user')
     }
 
-    let parsed: any = {}
-
-    if (isMultipart) {
-      const { body: formBody, uploadResult } = await processMultipartForm(
-        request,
-        ['testimonialFile'],
-        {
-          maxSize: 5 * 1024 * 1024, 
-          allowedTypes: ['image/jpeg', 'image/png', 'image/webp', 'application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'],
-          uploadDir: 'uploads/profile/testimonials'
-        }
-      )
-
-      if (!uploadResult.success) {
-        if (uploadResult.files[0]) {
-          if (uploadResult.files[0].url) {
-            await deleteFileByUrl(uploadResult.files[0].url, 'uploads/profile/testimonials');
-          }
-        }
-        if (uploadResult.validationErrors) {
-          return badErrorResponse(reply, 'Validation failed', uploadResult.validationErrors)
-        }
-        return serverErrorResponse(reply, uploadResult.error || 'File upload failed')
-      }
-
-      uploadedFile = { name: uploadResult.files[0].name, url: uploadResult.files[0].url }
-
-      parsed = userTestimonialSchema.parse(formBody)
-
-    } else {
-      parsed = userTestimonialSchema.parse(request.body)
-    }
-
+    let uploadedFile: { name: string; url: string } | null = null
     let oldFile: { name: string; url: string } | null | undefined = undefined
 
     const existingProfile = await getUserProfile(userId)
-    oldFile = existingProfile?.testimonial?.testimonialFile
+    oldFile = existingProfile?.testimonialFile
 
-    if ((oldFile && uploadedFile) && oldFile.url !== uploadedFile.url) {
-      await deleteFileByUrl(oldFile.url, 'uploads/profile/testimonials')
+    const { uploadResult } = await processMultipartForm(
+      request,
+      ['testimonialFile'],
+      {
+        maxSize: 5 * 1024 * 1024,
+        allowedTypes: [
+          'image/jpeg',
+          'image/png',
+          'image/webp',
+          'application/pdf',
+          'application/msword',
+          'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+        ],
+        uploadDir: 'uploads/profile/testimonials'
+      }
+    )
+
+    if (!uploadResult.success) {
+      if (uploadResult.validationErrors) {
+        return badErrorResponse(reply, 'Validation failed', uploadResult.validationErrors)
+      }
+      return serverErrorResponse(reply, uploadResult.error || 'File upload failed')
     }
 
-    const profile = await upsertTestimonial({
-      userId,
-      testimonial: {
-        ...parsed,
-        testimonialFile: uploadedFile || oldFile || undefined,
+    if (uploadResult.files[0]) {
+      uploadedFile = {
+        name: uploadResult.files[0].name,
+        url: uploadResult.files[0].url
       }
+
+      if ((oldFile && uploadedFile) && oldFile.url !== uploadedFile.url) {
+        await deleteFileByUrl(oldFile.url, 'uploads/profile/testimonials')
+      }
+    } else {
+      return badErrorResponse(reply, 'Validation failed', [{
+        path: 'testimonialFile',
+        message: 'Testimonial file is required'
+      }])
+    }
+
+    const profile = await upsertTestimonialFile({
+      userId,
+      testimonialFile: uploadedFile
     })
 
-    return successResponse(reply, 'Testimonial saved successfully', profile)
+    return successResponse(reply, 'Testimonial file uploaded successfully', profile)
 
   } catch (error) {
-
-    if (uploadedFile) {
-      await deleteFileByUrl(uploadedFile.url, 'uploads/profile/testimonials')
-    }
-
-    if (error instanceof ZodError) {
-      return badErrorResponse(reply, 'Validation failed.', error.errors.map(e => ({
-        path: e.path.join('.'),
-        message: e.message,
-      })))
-    }
-
-    return serverErrorResponse(reply, 'Failed to save testimonial info')
+    return serverErrorResponse(reply, 'Failed to upload testimonial file')
   }
 }
 
-export const profileMyVerified = async (request: FastifyRequest, reply: FastifyReply) => {
-    
-  let uploadedFile: { name: string; url: string } | null = null
-
+export const myVerifiedUpload = async (request: FastifyRequest, reply: FastifyReply) => {
   try {
-    const contentType = request.headers['content-type'] || ''
-    const isMultipart = contentType.includes('multipart/form-data')
-
     const userId = (request.user as any)?.userId
     if (!userId) {
       return badErrorResponse(reply, 'Unauthorized user')
     }
 
-    let parsed: any = {}
-
-    if (isMultipart) {
-      const { body: formBody, uploadResult } = await processMultipartForm(
-        request,
-        ['myVerifiedFile'],
-        {
-          maxSize: 5 * 1024 * 1024, 
-          allowedTypes: ['image/jpeg', 'image/png', 'image/webp', 'application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'],
-          uploadDir: 'uploads/profile/verifies'
-        }
-      )
-
-      if (!uploadResult.success) {
-        if (uploadResult.files[0]) {
-          if (uploadResult.files[0].url) {
-            await deleteFileByUrl(uploadResult.files[0].url, 'uploads/profile/verifies');
-          }
-        }
-        if (uploadResult.validationErrors) {
-          return badErrorResponse(reply, 'Validation failed', uploadResult.validationErrors)
-        }
-        return serverErrorResponse(reply, uploadResult.error || 'File upload failed')
-      }
-
-      uploadedFile = { name: uploadResult.files[0].name, url: uploadResult.files[0].url }
-
-      parsed = userMyVerifiedSchema.parse(formBody)
-
-    } else {
-      parsed = userMyVerifiedSchema.parse(request.body)
-    }
-
+    let uploadedFile: { name: string; url: string } | null = null
     let oldFile: { name: string; url: string } | null | undefined = undefined
 
     const existingProfile = await getUserProfile(userId)
-    oldFile = existingProfile?.myVerified?.myVerifiedFile
+    oldFile = existingProfile?.myVerifiedFile
 
-    if ((oldFile && uploadedFile) && oldFile.url !== uploadedFile.url) {
-      await deleteFileByUrl(oldFile.url, 'uploads/profile/verifies')
+    const { uploadResult } = await processMultipartForm(
+      request,
+      ['myVerifiedFile'],
+      {
+        maxSize: 5 * 1024 * 1024,
+        allowedTypes: [
+          'image/jpeg',
+          'image/png',
+          'image/webp',
+          'application/pdf',
+          'application/msword',
+          'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+        ],
+        uploadDir: 'uploads/profile/verifies'
+      }
+    )
+
+    if (!uploadResult.success) {
+      if (uploadResult.validationErrors) {
+        return badErrorResponse(reply, 'Validation failed', uploadResult.validationErrors)
+      }
+      return serverErrorResponse(reply, uploadResult.error || 'File upload failed')
     }
 
-    const profile = await upsertMyVerified({
-      userId,
-      myVerified: {
-        ...parsed,
-        myVerifiedFile: uploadedFile || oldFile || undefined,
+    if (uploadResult.files[0]) {
+      uploadedFile = {
+        name: uploadResult.files[0].name,
+        url: uploadResult.files[0].url
       }
+
+      if ((oldFile && uploadedFile) && oldFile.url !== uploadedFile.url) {
+        await deleteFileByUrl(oldFile.url, 'uploads/profile/verifies')
+      }
+    } else {
+      return badErrorResponse(reply, 'Validation failed', [{
+        path: 'myVerifiedFile',
+        message: 'My verified file is required'
+      }])
+    }
+
+    const profile = await upsertMyVerifiedFile({
+      userId,
+      myVerifiedFile: uploadedFile
     })
 
-    return successResponse(reply, 'My verified info saved successfully', profile)
+    return successResponse(reply, 'My verified file uploaded successfully', profile)
 
   } catch (error) {
-
-    if (uploadedFile) {
-      await deleteFileByUrl(uploadedFile.url, 'uploads/profile/verifies')
-    }
-
-    if (error instanceof ZodError) {
-      return badErrorResponse(reply, 'Validation failed.', error.errors.map(e => ({
-        path: e.path.join('.'),
-        message: e.message,
-      })))
-    }
-
-    return serverErrorResponse(reply, 'Failed to save my verified info')
+    return serverErrorResponse(reply, 'Failed to upload My verified file')
   }
 }
 
-export const profileCommitmentNote = async (request: FastifyRequest, reply: FastifyReply) => {
-    
-  let uploadedFile: { name: string; url: string } | null = null
-
+export const commitmentUpload = async (request: FastifyRequest, reply: FastifyReply) => {
   try {
-    const contentType = request.headers['content-type'] || ''
-    const isMultipart = contentType.includes('multipart/form-data')
-
     const userId = (request.user as any)?.userId
     if (!userId) {
       return badErrorResponse(reply, 'Unauthorized user')
     }
 
-    let parsed: any = {}
-
-    if (isMultipart) {
-      const { body: formBody, uploadResult } = await processMultipartForm(
-        request,
-        ['commitmentFile'],
-        {
-          maxSize: 5 * 1024 * 1024, 
-          allowedTypes: ['image/jpeg', 'image/png', 'image/webp', 'application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'],
-          uploadDir: 'uploads/profile/commitments'
-        }
-      )
-
-      if (!uploadResult.success) {
-        if (uploadResult.files[0]) {
-          if (uploadResult.files[0].url) {
-            await deleteFileByUrl(uploadResult.files[0].url, 'uploads/profile/commitments');
-          }
-        }
-        if (uploadResult.validationErrors) {
-          return badErrorResponse(reply, 'Validation failed', uploadResult.validationErrors)
-        }
-        return serverErrorResponse(reply, uploadResult.error || 'File upload failed')
-      }
-
-      uploadedFile = { name: uploadResult.files[0].name, url: uploadResult.files[0].url }
-
-      parsed = userCommitmentNoteSchema.parse(formBody)
-
-    } else {
-      parsed = userCommitmentNoteSchema.parse(request.body)
-    }
-
+    let uploadedFile: { name: string; url: string } | null = null
     let oldFile: { name: string; url: string } | null | undefined = undefined
 
     const existingProfile = await getUserProfile(userId)
-    oldFile = existingProfile?.commitmentNote?.commitmentFile
+    oldFile = existingProfile?.commitmentFile
 
-    if ((oldFile && uploadedFile) && oldFile.url !== uploadedFile.url) {
-      await deleteFileByUrl(oldFile.url, 'uploads/profile/commitments')
+    const { uploadResult } = await processMultipartForm(
+      request,
+      ['commitmentFile'],
+      {
+        maxSize: 5 * 1024 * 1024,
+        allowedTypes: [
+          'image/jpeg',
+          'image/png',
+          'image/webp',
+          'application/pdf',
+          'application/msword',
+          'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+        ],
+        uploadDir: 'uploads/profile/commitments'
+      }
+    )
+
+    if (!uploadResult.success) {
+      if (uploadResult.validationErrors) {
+        return badErrorResponse(reply, 'Validation failed', uploadResult.validationErrors)
+      }
+      return serverErrorResponse(reply, uploadResult.error || 'File upload failed')
     }
 
-    const profile = await upsertCommitmentNote({
-      userId,
-      commitmentNote: {
-        ...parsed,
-        commitmentFile: uploadedFile || oldFile || undefined,
+    if (uploadResult.files[0]) {
+      uploadedFile = {
+        name: uploadResult.files[0].name,
+        url: uploadResult.files[0].url
       }
+
+      if ((oldFile && uploadedFile) && oldFile.url !== uploadedFile.url) {
+        await deleteFileByUrl(oldFile.url, 'uploads/profile/commitments')
+      }
+    } else {
+      return badErrorResponse(reply, 'Validation failed', [{
+        path: 'commitmentFile',
+        message: 'Commitment file is required'
+      }])
+    }
+
+    const profile = await upsertCommitmentFile({
+      userId,
+      commitmentFile: uploadedFile
     })
 
-    return successResponse(reply, 'Understanding letter saved successfully', profile)
+    return successResponse(reply, 'Commitment file uploaded successfully', profile)
 
   } catch (error) {
+    return serverErrorResponse(reply, 'Failed to upload commitment file')
+  }
+}
 
-    if (uploadedFile) {
-      await deleteFileByUrl(uploadedFile.url, 'uploads/profile/commitments')
+export const ndaFilesUpload = async (request: FastifyRequest, reply: FastifyReply) => {
+  try {
+    const userId = (request.user as any)?.userId
+    if (!userId) {
+      return badErrorResponse(reply, 'Unauthorized user')
     }
 
-    if (error instanceof ZodError) {
-      return badErrorResponse(reply, 'Validation failed.', error.errors.map(e => ({
-        path: e.path.join('.'),
-        message: e.message,
-      })))
+    let uploadedFirstPageFile: { name: string; url: string } | null = null
+    let uploadedSecondPageFile: { name: string; url: string } | null = null
+    let oldFirstPageFile: { name: string; url: string } | null | undefined = undefined
+    let oldSecondPageFile: { name: string; url: string } | null | undefined = undefined
+
+    const existingProfile = await getUserProfile(userId)
+    oldFirstPageFile = existingProfile?.ndaFiles?.firstPageFile
+    oldSecondPageFile = existingProfile?.ndaFiles?.secondPageFile
+
+    const { uploadResult } = await processMultipartForm(
+      request,
+      ['firstPageFile', 'secondPageFile'],
+      {
+        maxSize: 5 * 1024 * 1024, // 5MB
+        allowedTypes: [
+          'image/jpeg', 
+          'image/png', 
+          'image/webp',
+          'application/pdf',
+          'application/msword',
+          'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+        ],
+        uploadDir: 'uploads/profile/ndas'
+      }
+    )
+
+    if (!uploadResult.success) {
+      if (uploadResult.validationErrors) {
+        return badErrorResponse(reply, 'Validation failed', uploadResult.validationErrors)
+      }
+      return serverErrorResponse(reply, uploadResult.error || 'File upload failed')
     }
 
-    return serverErrorResponse(reply, 'Failed to save understanding letter')
+    const firstPageFileData = uploadResult.files.find(file => file.fieldname === 'firstPageFile')
+    const secondPageFileData = uploadResult.files.find(file => file.fieldname === 'secondPageFile')
+
+    if (!firstPageFileData && !secondPageFileData && !oldFirstPageFile && !oldSecondPageFile) {
+      return badErrorResponse(reply, 'Validation failed', [{
+        path: 'ndaFiles',
+        message: 'At least one NDA file is required'
+      }])
+    }
+
+    if (firstPageFileData) {
+      uploadedFirstPageFile = {
+        name: firstPageFileData.name,
+        url: firstPageFileData.url
+      }
+
+      if ((oldFirstPageFile && uploadedFirstPageFile) && oldFirstPageFile.url !== uploadedFirstPageFile.url) {
+        await deleteFileByUrl(oldFirstPageFile.url, 'uploads/profile/ndas')
+      }
+    }
+
+    if (secondPageFileData) {
+      uploadedSecondPageFile = {
+        name: secondPageFileData.name,
+        url: secondPageFileData.url
+      }
+
+      if ((oldSecondPageFile && uploadedSecondPageFile) && oldSecondPageFile.url !== uploadedSecondPageFile.url) {
+        await deleteFileByUrl(oldSecondPageFile.url, 'uploads/profile/ndas')
+      }
+    }
+
+    const ndaFiles = {
+      firstPageFile: uploadedFirstPageFile || oldFirstPageFile || undefined,
+      secondPageFile: uploadedSecondPageFile || oldSecondPageFile || undefined
+    }
+
+    const profile = await upsertNdaFiles({
+      userId,
+      ndaFiles
+    })
+
+    return successResponse(reply, 'NDA files uploaded successfully', profile)
+
+  } catch (error) {
+    return serverErrorResponse(reply, 'Failed to upload NDA files')
+  }
+}
+
+export const agreementFilesUpload = async (request: FastifyRequest, reply: FastifyReply) => {
+  try {
+    const userId = (request.user as any)?.userId
+    if (!userId) {
+      return badErrorResponse(reply, 'Unauthorized user')
+    }
+
+    let uploadedFirstPageFile: { name: string; url: string } | null = null
+    let uploadedSecondPageFile: { name: string; url: string } | null = null
+    let oldFirstPageFile: { name: string; url: string } | null | undefined = undefined
+    let oldSecondPageFile: { name: string; url: string } | null | undefined = undefined
+
+    const existingProfile = await getUserProfile(userId)
+    oldFirstPageFile = existingProfile?.agreementFiles?.firstPageFile
+    oldSecondPageFile = existingProfile?.agreementFiles?.secondPageFile
+
+    const { uploadResult } = await processMultipartForm(
+      request,
+      ['firstPageFile', 'secondPageFile'],
+      {
+        maxSize: 5 * 1024 * 1024, // 5MB
+        allowedTypes: [
+          'image/jpeg', 
+          'image/png', 
+          'image/webp',
+          'application/pdf',
+          'application/msword',
+          'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+        ],
+        uploadDir: 'uploads/profile/agreements'
+      }
+    )
+
+    if (!uploadResult.success) {
+      if (uploadResult.validationErrors) {
+        return badErrorResponse(reply, 'Validation failed', uploadResult.validationErrors)
+      }
+      return serverErrorResponse(reply, uploadResult.error || 'File upload failed')
+    }
+
+    const firstPageFileData = uploadResult.files.find(file => file.fieldname === 'firstPageFile')
+    const secondPageFileData = uploadResult.files.find(file => file.fieldname === 'secondPageFile')
+
+    if (!firstPageFileData && !secondPageFileData && !oldFirstPageFile && !oldSecondPageFile) {
+      return badErrorResponse(reply, 'Validation failed', [{
+        path: 'agreementFiles',
+        message: 'At least one Agreement file is required'
+      }])
+    }
+
+    if (firstPageFileData) {
+      uploadedFirstPageFile = {
+        name: firstPageFileData.name,
+        url: firstPageFileData.url
+      }
+
+      if ((oldFirstPageFile && uploadedFirstPageFile) && oldFirstPageFile.url !== uploadedFirstPageFile.url) {
+        await deleteFileByUrl(oldFirstPageFile.url, 'uploads/profile/agreements')
+      }
+    }
+
+    if (secondPageFileData) {
+      uploadedSecondPageFile = {
+        name: secondPageFileData.name,
+        url: secondPageFileData.url
+      }
+
+      if ((oldSecondPageFile && uploadedSecondPageFile) && oldSecondPageFile.url !== uploadedSecondPageFile.url) {
+        await deleteFileByUrl(oldSecondPageFile.url, 'uploads/profile/agreements')
+      }
+    }
+
+    const agreementFiles = {
+      firstPageFile: uploadedFirstPageFile || oldFirstPageFile || undefined,
+      secondPageFile: uploadedSecondPageFile || oldSecondPageFile || undefined
+    }
+
+    const profile = await upsertAgreementFiles({
+      userId,
+      agreementFiles
+    })
+
+    return successResponse(reply, 'Agreement files uploaded successfully', profile)
+
+  } catch (error) {
+    return serverErrorResponse(reply, 'Failed to upload Agreement files')
   }
 }
 

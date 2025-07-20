@@ -1,5 +1,5 @@
 import mongoose from 'mongoose'
-import { UserProfile, IUserProfile, IIdentity, IBasic, IEmergencyContact, IAddress, IOther, ICvFile, IWorkInfo, IEducation, ITestimonial, IMyVerified, ICommitmentNote } from '../models/profile.model'
+import { UserProfile, IUserProfile, IIdentity, IBasic, IEmergencyContact, IAddress, IOther, IFile, IWorkInfo, IEducationFiles, INdaFiles, IAgreementFiles } from '../models/profile.model'
 import { Application } from '../models/application.model'
 
 type BasicInfoPayload = {
@@ -20,41 +20,6 @@ type IdentityPayload = {
     docFiles: {type: string, side?: string, name: string; url: string }[]
   }
 }
-
-type EducationPayload = {
-  userId: string
-  education: {
-    degree: string
-    cgpaOrGpa: number
-    passingYear: number
-    certificateFile: { name: string; url: string }
-  }
-}
-
-type TestimonialPayload = {
-  userId: string
-  testimonial: {
-    title: string
-    testimonialFile: { name: string; url: string }
-  }
-}
-
-type MyVerifiedPayload = {
-  userId: string
-  myVerified: {
-    title: string
-    myVerifiedFile: { name: string; url: string }
-  }
-}
-
-type CommitmentNotePayload = {
-  userId: string
-  commitmentNote: {
-    title: string
-    commitmentFile: { name: string; url: string }
-  }
-}
-
 export interface EmergencyContactPayload {
  userId: string;
  emergencyContact: {
@@ -75,12 +40,49 @@ export interface OtherPayload {
 
 export interface CvFilePayload {
   userId: mongoose.Types.ObjectId;
-  cvFile: ICvFile;
+  cvFile: IFile;
 }
-
 export interface WorkInfoPayload {
   userId: mongoose.Types.ObjectId;
   workInfo: IWorkInfo;
+}
+export interface  EducationFilesPayload {
+  userId: mongoose.Types.ObjectId
+  educationFiles: {
+    sscCertFile?: IFile
+    lastCertFile?: IFile
+  }
+}
+
+export interface TestimonialFilePayload {
+  userId: mongoose.Types.ObjectId;
+  testimonialFile: IFile;
+}
+
+export interface MyVerifiedFilePayload {
+  userId: mongoose.Types.ObjectId;
+  myVerifiedFile: IFile;
+}
+
+export interface CommitmentFilePayload {
+  userId: mongoose.Types.ObjectId;
+  commitmentFile: IFile;
+}
+
+export interface  NdaFilesPayload {
+  userId: mongoose.Types.ObjectId
+  ndaFiles: {
+    firstPageFile?: IFile
+    secondPageFile?: IFile
+  }
+}
+
+export interface  AgreementFilesPayload {
+  userId: mongoose.Types.ObjectId
+  agreementFiles: {
+    firstPageFile?: IFile
+    secondPageFile?: IFile
+  }
 }
 
 export async function upsertBasicInfo(payload: BasicInfoPayload): Promise<IBasic> {
@@ -143,7 +145,7 @@ export async function upsertOther(payload: OtherPayload): Promise<IOther> {
   return profile.other
 }
 
-export async function upsertCvFile(payload: CvFilePayload): Promise<ICvFile> {
+export async function upsertCvFile(payload: CvFilePayload): Promise<IFile> {
   const { userId, cvFile } = payload
   
   const profile = await UserProfile.findOneAndUpdate(
@@ -154,6 +156,7 @@ export async function upsertCvFile(payload: CvFilePayload): Promise<ICvFile> {
   
   return profile.cvFile
 }
+
 
 export async function upsertWorkInfo(payload: WorkInfoPayload): Promise<IWorkInfo> {
   const { userId, workInfo } = payload
@@ -167,53 +170,76 @@ export async function upsertWorkInfo(payload: WorkInfoPayload): Promise<IWorkInf
   return profile.workInfo
 }
 
-
-export async function upsertEducation(payload: EducationPayload): Promise<IEducation> {
-  const { userId, education } = payload
+export async function upsertEducationFiles(payload: EducationFilesPayload): Promise<IEducationFiles> {
+  const { userId, educationFiles } = payload
 
   const profile = await UserProfile.findOneAndUpdate(
     { userId },
-    { $set: { education } },
+    { $set: { educationFiles } },
     { upsert: true, new: true }
   )
 
-  return profile.education
+  return profile.educationFiles
 }
 
-export async function upsertTestimonial(payload: TestimonialPayload): Promise<ITestimonial> {
-  const { userId, testimonial } = payload
-
+export async function upsertTestimonialFile(payload: TestimonialFilePayload): Promise<IFile> {
+  const { userId, testimonialFile } = payload
+  
   const profile = await UserProfile.findOneAndUpdate(
     { userId },
-    { $set: { testimonial } },
+    { $set: { testimonialFile } },
     { upsert: true, new: true }
   )
-
-  return profile.testimonial
+  
+  return profile.testimonialFile
 }
 
-export async function upsertMyVerified(payload: MyVerifiedPayload): Promise<IMyVerified> {
-  const { userId, myVerified } = payload
-
+export async function upsertMyVerifiedFile(payload: MyVerifiedFilePayload): Promise<IFile> {
+  const { userId, myVerifiedFile } = payload
+  
   const profile = await UserProfile.findOneAndUpdate(
     { userId },
-    { $set: { myVerified } },
+    { $set: { myVerifiedFile } },
     { upsert: true, new: true }
   )
-
-  return profile.myVerified
+  
+  return profile.myVerifiedFile
 }
 
-export async function upsertCommitmentNote(payload: CommitmentNotePayload): Promise<ICommitmentNote> {
-  const { userId, commitmentNote } = payload
+export async function upsertCommitmentFile(payload: CommitmentFilePayload): Promise<IFile> {
+  const { userId, commitmentFile } = payload
+  
+  const profile = await UserProfile.findOneAndUpdate(
+    { userId },
+    { $set: { commitmentFile } },
+    { upsert: true, new: true }
+  )
+  
+  return profile.commitmentFile
+}
+
+export async function upsertNdaFiles(payload: NdaFilesPayload): Promise<INdaFiles> {
+  const { userId, ndaFiles } = payload
 
   const profile = await UserProfile.findOneAndUpdate(
     { userId },
-    { $set: { commitmentNote } },
+    { $set: { ndaFiles } },
     { upsert: true, new: true }
   )
 
-  return profile.commitmentNote
+  return profile.ndaFiles
+}
+
+export async function upsertAgreementFiles(payload: AgreementFilesPayload): Promise<IAgreementFiles> {
+  const { userId, agreementFiles } = payload
+
+  const profile = await UserProfile.findOneAndUpdate(
+    { userId },
+    { $set: { agreementFiles } },
+    { upsert: true, new: true }
+  )
+
+  return profile.agreementFiles
 }
 
 export async function getUserProfile(userId: string): Promise<IUserProfile | null> {
@@ -231,6 +257,7 @@ export async function checkCanApply(userId: string): Promise<boolean> {
   const hasBasicInfo = profile.basic?.fullName && 
                     profile.basic?.dateOfBirth && 
                     profile.basic?.phone &&
+                    profile.basic?.educationLevel &&
                     profile.basic?.profilePicFile?.name &&
                     profile.basic?.profilePicFile?.url;
 
@@ -296,30 +323,26 @@ export async function needAdditionalInfo(userId: string): Promise<boolean> {
     profile.workInfo?.shift &&
     profile.workInfo?.reference
 
-  const educationValid = profile.education?.degree &&
-    profile.education?.cgpaOrGpa !== undefined &&
-    profile.education?.passingYear &&
-    profile.education?.certificateFile?.name &&
-    profile.education?.certificateFile?.url
+  const educationValid = profile.educationFiles?.sscCertFile
 
-  const testimonialValid = profile.testimonial?.title &&
-    profile.testimonial?.testimonialFile?.name &&
-    profile.testimonial?.testimonialFile?.url
+  const testimonialValid = profile.testimonialFile
 
-  const myVerifiedValid = profile.myVerified?.title &&
-    profile.myVerified?.myVerifiedFile?.name &&
-    profile.myVerified?.myVerifiedFile?.url
+  const myVerifiedValid = profile.myVerifiedFile
 
-  const commitmentNoteValid = profile.commitmentNote?.title &&
-    profile.commitmentNote?.commitmentFile?.name &&
-    profile.commitmentNote?.commitmentFile?.url
+  const commitmentValid = profile.commitmentFile
+
+  const ndaValid = profile.ndaFiles
+
+  const agreementValid = profile.agreementFiles
 
   const allValid = Boolean(
     workInfoValid &&
     educationValid &&
     testimonialValid &&
     myVerifiedValid &&
-    commitmentNoteValid
+    commitmentValid && 
+    ndaValid &&
+    agreementValid
   )
 
   return !allValid
