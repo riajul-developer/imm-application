@@ -25,7 +25,7 @@ export const createApplication = async (userId: string): Promise<IApplication> =
 
   const application = new Application({
     userId,
-    status: 'submitted'
+    status: 'applied'
   })
 
   return await application.save()
@@ -37,7 +37,7 @@ export const getUserApplications = async (userId: string): Promise<IApplication[
 
 export const checkUserCanCompleteProfile = async (userId: string): Promise<boolean> => {
   const application = await Application.findOne({ userId })
-  return application?.status === 'approved'
+  return application?.status === 'selected'
 }
 
 export async function allApplications(
