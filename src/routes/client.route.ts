@@ -7,7 +7,7 @@ import {
   agreementFilesUpload
 } from '../controllers/client/profile.controller'
 import { authenticate } from '../plugins/auth.plugin'
-import { canCompleteProfile, getMyApplication, submitApplication } from '../controllers/client/application.controller'
+import { canCompleteProfile, getMyApplication, appliedApplication } from '../controllers/client/application.controller'
 
 export default async function clientRoutes(fastify: FastifyInstance) {
   fastify.post('/auth/send-otp', sendOtp)
@@ -34,7 +34,7 @@ export default async function clientRoutes(fastify: FastifyInstance) {
   }
 
   const applicationRoutes = async (fastify: FastifyInstance) => {
-    fastify.post('/submit', { preHandler: authenticate }, submitApplication)
+    fastify.post('/submit', { preHandler: authenticate }, appliedApplication)
     fastify.get('/my-status', { preHandler: authenticate }, getMyApplication)
     fastify.get('/can-complete-profile', { preHandler: authenticate }, canCompleteProfile)
   }
