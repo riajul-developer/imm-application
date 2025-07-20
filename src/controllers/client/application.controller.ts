@@ -8,7 +8,7 @@ import { successResponse, badErrorResponse, serverErrorResponse } from '../../ut
 import { getUserProfile } from '../../services/profile.service'
 
 // Submit application
-export const submitApplication = async (request: FastifyRequest, reply: FastifyReply) => {
+export const appliedApplication = async (request: FastifyRequest, reply: FastifyReply) => {
 
   try {
     const userId = (request.user as any)?.userId
@@ -30,7 +30,7 @@ export const submitApplication = async (request: FastifyRequest, reply: FastifyR
 
     const application = await createApplication(userId)
 
-    return successResponse(reply, 'Submitted successfully! Please wait for admin approval', application)
+    return successResponse(reply, 'Applied successfully! Please wait for admin approval', application)
 
   } catch (error) {
     if (error instanceof Error && error.message.includes('You can apply again after')) {

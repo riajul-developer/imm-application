@@ -1,6 +1,6 @@
 import mongoose from 'mongoose'
 
-export type ApplicationStatus = 'submitted' | 'under-review' | 'approved' | 'rejected'
+export type ApplicationStatus = 'applied' | 'scheduled' | 'selected' | 'under-review' | 'submitted'
 
 export interface IApplication extends mongoose.Document {
   userId: mongoose.Types.ObjectId
@@ -21,8 +21,8 @@ const applicationSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ['submitted', 'under-review', 'approved', 'rejected'],
-      default: 'submitted'
+      enum: ['applied', 'scheduled', 'selected', 'under-review', 'submitted'],
+      default: 'applied'
     },
     submittedAt: {
       type: Date,
