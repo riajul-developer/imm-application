@@ -314,8 +314,12 @@ export async function needAdditionalInfo(userId: string): Promise<boolean> {
 
   if (!profile) return false;
 
-  const approvedApplication = await Application.findOne({ userId, status: 'approved' })
-  if (!approvedApplication) return false
+  const applicationStatus = await Application.findOne({
+    userId,
+    status: { $in: ['selected', 'under-review', 'submitted'] },
+  });
+
+  if (!applicationStatus) return false
 
   const workInfoValid = profile.workInfo?.employeeId &&
     profile.workInfo?.projectName &&
