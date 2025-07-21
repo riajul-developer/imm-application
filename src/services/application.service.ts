@@ -2,7 +2,7 @@ import { Application, IApplication } from '../models/application.model'
 import { UserProfile } from '../models/profile.model'
 
 interface UpdateStatusInput {
-  status: 'submitted' | 'under-review' | 'approved' | 'rejected';
+  status: 'applied' | 'scheduled' | 'selected' | 'under-review' | 'submitted' | 'rejected';
   adminNotes?: string;
   rejectionReason?: string;
 }

@@ -7,13 +7,13 @@ export const reviewApplicationSchema = z.object({
 })
 
 export const getApplicationsQuerySchema = z.object({
-  status: z.enum(['submitted', 'under-review', 'approved', 'rejected']).optional(),
+  status: z.enum(['applied', 'scheduled', 'selected', 'under-review', 'submitted', 'rejected']).optional(),
   page: z.string().transform(val => parseInt(val)).default('1'),
   limit: z.string().transform(val => parseInt(val)).default('10')
 })
 
 export const updateStatusSchema = z.object({
-  status: z.enum(['submitted', 'under-review', 'approved', 'rejected']),
+  status: z.enum(['applied', 'scheduled', 'selected', 'under-review', 'submitted', 'rejected']),
   adminNotes: z.string().optional(),
   rejectionReason: z.string().optional()
 });
