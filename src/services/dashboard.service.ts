@@ -1,23 +1,26 @@
 import { Application } from '../models/application.model';
 
 export async function dashboard() {
+  const totalApplications = await Application.countDocuments();
 
-    const totalApplications = await Application.countDocuments();
+  const appliedCount = await Application.countDocuments({ status: 'applied' });
+  const submittedCount = await Application.countDocuments({ status: 'submitted' });
+  const scheduledCount = await Application.countDocuments({ status: 'scheduled' });
+  const underReviewCount = await Application.countDocuments({ status: 'under-review' });
+  const selectedCount = await Application.countDocuments({ status: 'selected' });
+  const rejectedCount = await Application.countDocuments({ status: 'rejected' });
 
-    const submittedCount = await Application.countDocuments({ status: 'submitted' });
-    const underReviewCount = await Application.countDocuments({ status: 'under-review' });
-    const approvedCount = await Application.countDocuments({ status: 'approved' });
-    const rejectedCount = await Application.countDocuments({ status: 'rejected' });
-
-    return {
-        totalApplications,
-        submittedCount,
-        underReviewCount,
-        approvedCount,
-        rejectedCount
-    };
-    
+  return {
+    totalApplications,
+    appliedCount,
+    submittedCount,
+    scheduledCount,
+    underReviewCount,
+    selectedCount,
+    rejectedCount
+  };
 }
+
 
 export async function recentApplications() {
 
