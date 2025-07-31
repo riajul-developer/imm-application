@@ -4,7 +4,7 @@ import {
   getUserApplications,
   checkUserCanCompleteProfile,
 } from '../../services/application.service'
-import { successResponse, badErrorResponse, serverErrorResponse } from '../../utils/response.util'
+import { successResponse, badErrorResponse, serverErrorResponse, unauthorizedResponse } from '../../utils/response.util'
 import { getUserProfile } from '../../services/profile.service'
 
 // Submit application
@@ -13,7 +13,7 @@ export const appliedApplication = async (request: FastifyRequest, reply: Fastify
   try {
     const userId = (request.user as any)?.userId
     if (!userId) {
-      return badErrorResponse(reply, 'Unauthorized user')
+      return unauthorizedResponse(reply, 'Unauthorized user')
     }
 
     const profile = await getUserProfile(userId)

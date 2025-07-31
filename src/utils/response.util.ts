@@ -1,4 +1,3 @@
-// src/utils/response.ts
 
 export type APIResponse = {
   success: boolean;
