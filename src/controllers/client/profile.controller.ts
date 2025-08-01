@@ -1,7 +1,7 @@
 // controllers/profile.controller.ts
 import { FastifyRequest, FastifyReply } from 'fastify'
 import { ZodError } from 'zod'
-import { badErrorResponse, serverErrorResponse, successResponse } from '../../utils/response.util'
+import { badErrorResponse, notFoundResponse, serverErrorResponse, successResponse, unauthorizedResponse } from '../../utils/response.util'
 import { userBasicInfoSchema, emergencyContactSchema, addressSchema, otherSchema, userIdentitySchema, workInfoSchema} from '../../schemas/profile.schema'
 import { 
   checkCanApply, getUserProfile, needAdditionalInfo, upsertAddress, upsertAgreementFiles, upsertBasicInfo, upsertCommitmentFile, upsertCvFile,
@@ -22,7 +22,7 @@ export const profileBasicInfo = async (request: FastifyRequest, reply: FastifyRe
 
     const userId = (request.user as any)?.userId
     if (!userId) {
-      return badErrorResponse(reply, 'Unauthorized user')
+      return unauthorizedResponse(reply, 'Unauthorized user')
     }
 
     let parsed: any = {};
@@ -104,7 +104,7 @@ export const profileIdentity = async (request: FastifyRequest, reply: FastifyRep
 
     const userId = (request.user as any)?.userId
     if (!userId) {
-      return badErrorResponse(reply, 'Unauthorized user')
+      return unauthorizedResponse(reply, 'Unauthorized user')
     }
 
     let parsed: any = {};
@@ -225,7 +225,7 @@ export const profileEmergencyContact = async (request: FastifyRequest, reply: Fa
   try {
     const userId = (request.user as any)?.userId
     if (!userId) {
-      return badErrorResponse(reply, 'Unauthorized user')
+      return unauthorizedResponse(reply, 'Unauthorized user')
     }
 
     const body = request.body as any
@@ -257,7 +257,7 @@ export const profileAddress = async (request: FastifyRequest, reply: FastifyRepl
   try {
     const userId = (request.user as any)?.userId
     if (!userId) {
-      return badErrorResponse(reply, 'Unauthorized user')
+      return unauthorizedResponse(reply, 'Unauthorized user')
     }
 
     const body = request.body as any
@@ -291,7 +291,7 @@ export const profileOther = async (request: FastifyRequest, reply: FastifyReply)
  try {
   const userId = (request.user as any)?.userId
   if (!userId) {
-    return badErrorResponse(reply, 'Unauthorized user')
+    return unauthorizedResponse(reply, 'Unauthorized user')
   }
 
   const body = request.body as any
@@ -322,7 +322,7 @@ export const profileCvUpload = async (request: FastifyRequest, reply: FastifyRep
   try {
     const userId = (request.user as any)?.userId
     if (!userId) {
-      return badErrorResponse(reply, 'Unauthorized user')
+      return unauthorizedResponse(reply, 'Unauthorized user')
     }
 
     let uploadedFile: { name: string; url: string } | null = null
@@ -391,7 +391,7 @@ export const profileWorkInfo = async (request: FastifyRequest, reply: FastifyRep
     const userId = (request.user as any)?.userId
 
     if (!userId) {
-      return badErrorResponse(reply, 'Unauthorized user')
+      return unauthorizedResponse(reply, 'Unauthorized user')
     }
 
     const body = request.body as any
@@ -420,7 +420,7 @@ export const educationFilesUpload = async (request: FastifyRequest, reply: Fasti
   try {
     const userId = (request.user as any)?.userId
     if (!userId) {
-      return badErrorResponse(reply, 'Unauthorized user')
+      return unauthorizedResponse(reply, 'Unauthorized user')
     }
 
     let uploadedSscCertFile: { name: string; url: string } | null = null
@@ -515,7 +515,7 @@ export const testimonialUpload = async (request: FastifyRequest, reply: FastifyR
   try {
     const userId = (request.user as any)?.userId
     if (!userId) {
-      return badErrorResponse(reply, 'Unauthorized user')
+      return unauthorizedResponse(reply, 'Unauthorized user')
     }
 
     let uploadedFile: { name: string; url: string } | null = null
@@ -580,7 +580,7 @@ export const myVerifiedUpload = async (request: FastifyRequest, reply: FastifyRe
   try {
     const userId = (request.user as any)?.userId
     if (!userId) {
-      return badErrorResponse(reply, 'Unauthorized user')
+      return unauthorizedResponse(reply, 'Unauthorized user')
     }
 
     let uploadedFile: { name: string; url: string } | null = null
@@ -645,7 +645,7 @@ export const commitmentUpload = async (request: FastifyRequest, reply: FastifyRe
   try {
     const userId = (request.user as any)?.userId
     if (!userId) {
-      return badErrorResponse(reply, 'Unauthorized user')
+      return unauthorizedResponse(reply, 'Unauthorized user')
     }
 
     let uploadedFile: { name: string; url: string } | null = null
@@ -710,7 +710,7 @@ export const ndaFilesUpload = async (request: FastifyRequest, reply: FastifyRepl
   try {
     const userId = (request.user as any)?.userId
     if (!userId) {
-      return badErrorResponse(reply, 'Unauthorized user')
+      return unauthorizedResponse(reply, 'Unauthorized user')
     }
 
     let uploadedFirstPageFile: { name: string; url: string } | null = null
@@ -799,7 +799,7 @@ export const agreementFilesUpload = async (request: FastifyRequest, reply: Fasti
   try {
     const userId = (request.user as any)?.userId
     if (!userId) {
-      return badErrorResponse(reply, 'Unauthorized user')
+      return unauthorizedResponse(reply, 'Unauthorized user')
     }
 
     let uploadedFirstPageFile: { name: string; url: string } | null = null
@@ -888,11 +888,11 @@ export const profileMe = async (request: FastifyRequest, reply: FastifyReply) =>
   try {
     const userId = (request.user as any)?.userId
     if (!userId) {
-      return badErrorResponse(reply, 'Unauthorized user')
+      return unauthorizedResponse(reply, 'Unauthorized user')
     }
     const profile = await getUserProfile(userId)
     if (!profile) {
-      return successResponse(reply, 'Profile not found', null)
+      return successResponse(reply, 'Profile not found',null)
     }
     const canApplication = await checkCanApply(userId);
     const additionalInfo = await needAdditionalInfo(userId);
@@ -911,7 +911,6 @@ export const profileMe = async (request: FastifyRequest, reply: FastifyReply) =>
     return successResponse(reply, 'Profile retrieved successfully', responseData)
 
   } catch (error) {
-    console.error('Get profile error:', error)
     return serverErrorResponse(reply, 'Failed to retrieve profile')
   }
 }
