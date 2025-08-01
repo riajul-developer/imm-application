@@ -892,7 +892,7 @@ export const profileMe = async (request: FastifyRequest, reply: FastifyReply) =>
     }
     const profile = await getUserProfile(userId)
     if (!profile) {
-      return notFoundResponse(reply, 'Profile not found')
+      return successResponse(reply, 'Profile not found',null)
     }
     const canApplication = await checkCanApply(userId);
     const additionalInfo = await needAdditionalInfo(userId);
