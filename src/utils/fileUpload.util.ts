@@ -82,7 +82,7 @@ export async function uploadSingleFile(
     }
 
     // Create file URL
-    const fileUrl = `${request.protocol}://${request.headers.host}/${opts.uploadDir}/${uniqueFilename}`
+    const fileUrl = `${request.protocol}://${request.headers.host}:8080/${opts.uploadDir}/${uniqueFilename}`
     
     const uploadedFile: UploadedFile = {
       name: part.filename || uniqueFilename,

@@ -1,14 +1,54 @@
 import { Application } from '../models/application.model';
 
-export async function dashboard() {
-  const totalApplications = await Application.countDocuments();
+export async function dashboard(startDate?: string, endDate?: string) {
+  let dateFilter = {};
+  
+  if (startDate && endDate) {
+    dateFilter = { 
+      createdAt: { 
+        $gte: new Date(startDate), 
+        $lte: new Date(endDate) 
+      } 
+    };
+  } else if (startDate) {
+    dateFilter = { 
+      createdAt: { 
+        $gte: new Date(startDate) 
+      } 
+    };
+  } else if (endDate) {
+    dateFilter = { 
+      createdAt: { 
+        $lte: new Date(endDate) 
+      } 
+    };
+  }
 
-  const appliedCount = await Application.countDocuments({ status: 'applied' });
-  const submittedCount = await Application.countDocuments({ status: 'submitted' });
-  const scheduledCount = await Application.countDocuments({ status: 'scheduled' });
-  const underReviewCount = await Application.countDocuments({ status: 'under-review' });
-  const selectedCount = await Application.countDocuments({ status: 'selected' });
-  const rejectedCount = await Application.countDocuments({ status: 'rejected' });
+  const totalApplications = await Application.countDocuments(dateFilter);
+  const appliedCount = await Application.countDocuments({
+    status: 'applied',
+    ...dateFilter
+  });
+  const submittedCount = await Application.countDocuments({
+    status: 'submitted',
+    ...dateFilter
+  });
+  const scheduledCount = await Application.countDocuments({
+    status: 'scheduled',
+    ...dateFilter
+  });
+  const underReviewCount = await Application.countDocuments({
+    status: 'under-review',
+    ...dateFilter
+  });
+  const selectedCount = await Application.countDocuments({
+    status: 'selected',
+    ...dateFilter
+  });
+  const rejectedCount = await Application.countDocuments({
+    status: 'rejected',
+    ...dateFilter
+  });
 
   return {
     totalApplications,
