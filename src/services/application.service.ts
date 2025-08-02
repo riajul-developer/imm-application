@@ -203,3 +203,10 @@ export async function applicationStatus(userId: string): Promise<string> {
 
   return latestApplication.status;
 }
+
+export async function application(userId: string): Promise<IApplication | null> {
+  const latestApplication = await Application.findOne({ userId })
+    .sort({ submittedAt: -1 });
+
+  return latestApplication; 
+}
