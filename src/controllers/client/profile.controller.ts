@@ -9,7 +9,7 @@ import {
 } from '../../services/profile.service'
 import { processMultipartForm } from '../../utils/fileUpload.util'
 import { deleteFileByUrl } from '../../utils/fileDelete.util'
-import { applicationStatus } from '../../services/application.service'
+import { application, applicationStatus } from '../../services/application.service'
 
 
 export const profileBasicInfo = async (request: FastifyRequest, reply: FastifyReply) => {
@@ -891,12 +891,14 @@ export const profileMe = async (request: FastifyRequest, reply: FastifyReply) =>
       return unauthorizedResponse(reply, 'Unauthorized user')
     }
     const profile = await getUserProfile(userId)
+
     if (!profile) {
-      return successResponse(reply, 'Profile not found',null)
+      return successResponse(reply, 'Profile not found', null)
     }
+
     const canApplication = await checkCanApply(userId);
     const additionalInfo = await needAdditionalInfo(userId);
-    const statusApplication = await applicationStatus(userId);
+    const myApplication = await application(userId);
 
     const responseData = {
       canApplication,
@@ -904,8 +906,8 @@ export const profileMe = async (request: FastifyRequest, reply: FastifyReply) =>
       ...profile.toObject()
     }
 
-    if (statusApplication) {
-      responseData.applicationStatus = statusApplication
+    if (myApplication) {
+      responseData.application = myApplication
     }
 
     return successResponse(reply, 'Profile retrieved successfully', responseData)

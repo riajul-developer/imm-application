@@ -3,7 +3,8 @@ import { ZodError } from 'zod'
 import * as authService from '../../services/auth.service'
 import { sendOtpSchema, verifyOtpSchema } from '../../schemas/otp.schema'
 import { badErrorResponse, serverErrorResponse, successResponse, unauthorizedResponse } from '../../utils/response.util'
-import { getUserProfile } from '../../services/profile.service'
+import { checkCanApply, getUserProfile, needAdditionalInfo } from '../../services/profile.service'
+import { application } from '../../services/application.service'
 
 export const sendOtp = async (request: FastifyRequest, reply: FastifyReply) => {
   try {
@@ -30,8 +31,26 @@ export const verifyOtp = async (request: FastifyRequest, reply: FastifyReply) =>
     const userId = decoded.userId
 
     const profile = await getUserProfile(userId);
+    const canApplication = await checkCanApply(userId);
+    const additionalInfo = await needAdditionalInfo(userId);
+    const myApplication = await application(userId);
 
-    return successResponse(reply, 'OTP verified successfully', { token, profile })
+
+    if (!profile) {
+      return successResponse(reply, 'OTP verified successfully', { token })
+    }
+    
+    const responseData = {
+      canApplication,
+      needAdditionalInfo: additionalInfo,
+      ...profile.toObject()
+    }
+
+    if (myApplication) {
+      responseData.application = myApplication
+    }
+
+    return successResponse(reply, 'OTP verified successfully', { token, profile : responseData })
   } catch (error) {
 
     if (error instanceof ZodError) {
