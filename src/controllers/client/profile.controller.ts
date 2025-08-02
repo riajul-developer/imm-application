@@ -116,7 +116,14 @@ export const profileIdentity = async (request: FastifyRequest, reply: FastifyRep
         ['nidFrontDoc', 'nidBackDoc', 'passportFrontDoc', 'passportBackDoc', 'birthRegDoc'], 
         {
           maxSize: 3 * 1024 * 1024,
-          allowedTypes: ['image/jpeg', 'image/png', 'image/webp'],
+          allowedTypes: [
+            'image/jpeg', 
+            'image/png', 
+            'image/webp', 
+            'application/pdf', 
+            'application/msword', 
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+          ],
           uploadDir: 'uploads/profile/identities'
         }
       )
