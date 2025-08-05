@@ -2,8 +2,8 @@ import { User } from '../models/user.model'
 import { sendSMS } from '../utils/sms.util'
 
 export async function sendOtp(phoneNumber: string) {
-  // const otp = Math.floor(100000 + Math.random() * 900000).toString()
-  const otp = 123456
+  const otp = Math.floor(100000 + Math.random() * 900000).toString()
+
   const otpExpiry = new Date(Date.now() + 10 * 60 * 1000) // 10 minutes
 
   await User.findOneAndUpdate(
@@ -12,7 +12,7 @@ export async function sendOtp(phoneNumber: string) {
     { upsert: true, new: true }
   )
 
-  // await sendSMS(phoneNumber, `Your OTP is: ${otp}. Valid for 10 minutes.`)
+  await sendSMS(phoneNumber, `Your IIMI OTP is: ${otp}. Valid for 10 minutes.`)
 }
 
 export async function verifyOtp(phoneNumber: string, otp: string, request: any) {
