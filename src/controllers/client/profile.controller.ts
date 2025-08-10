@@ -35,7 +35,7 @@ export const profileBasicInfo = async (request: FastifyRequest, reply: FastifyRe
         request,
         ['profilePic'], 
         {
-          maxSize: 3 * 1024 * 1024, // 3MB
+          maxSize: 5 * 1024 * 1024, // 5MB
           allowedTypes: ['image/jpeg', 'image/png'],
           uploadDir: 'uploads/profile/basics'
         }
@@ -115,7 +115,7 @@ export const profileIdentity = async (request: FastifyRequest, reply: FastifyRep
         request,
         ['nidFrontDoc', 'nidBackDoc', 'passportFrontDoc', 'passportBackDoc', 'birthRegDoc'], 
         {
-          maxSize: 3 * 1024 * 1024,
+          maxSize: 5 * 1024 * 1024,
           allowedTypes: [
             'image/jpeg', 
             'image/png', 

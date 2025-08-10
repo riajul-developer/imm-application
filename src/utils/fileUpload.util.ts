@@ -28,7 +28,7 @@ export interface FileUploadResult {
 }
 
 const DEFAULT_OPTIONS: Required<FileUploadOptions> = {
-  maxSize: 3 * 1024 * 1024, // 3MB
+  maxSize: 5 * 1024 * 1024, // 5MB
   allowedTypes: ['image/jpeg', 'image/png', 'image/webp'],
   uploadDir: 'uploads'
 }
