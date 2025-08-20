@@ -18,6 +18,9 @@ export const userBasicInfoSchema = z.object({
   fullName: z.string().min(2, 'Full name must be at least 2 characters'),
   email: z.string().email('Invalid email address'),
   educationLevel: z.string().min(2, 'Education level must be at least 2 characters'),
+  gender: z.enum(['male', 'female', 'undisclosed'], {
+    errorMap: () => ({ message: 'Gender must be male, female, or undisclosed' })
+  }),
   dateOfBirth: z
     .string()
     .refine((date) => !isNaN(Date.parse(date)), {
@@ -53,13 +56,6 @@ export const addressSchema = z.object({
 export const otherSchema = z.object({
   fathersName: z.string().min(1, 'Father\'s name is required'),
   mothersName: z.string().min(1, 'Mother\'s name is required'),
-  religion: z.string().min(1, 'Religion is required'),
-  gender: z.enum(['male', 'female', 'other'], {
-    errorMap: () => ({ message: 'Gender must be male, female, or other' })
-  }),
-  maritalStatus: z.enum(['single', 'married', 'divorced', 'widowed'], {
-    errorMap: () => ({ message: 'Invalid marital status' })
-  })
 })
 
 export const uploadFileSchema = z.object({

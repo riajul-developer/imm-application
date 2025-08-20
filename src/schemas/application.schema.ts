@@ -15,5 +15,6 @@ export const getApplicationsQuerySchema = z.object({
 export const updateStatusSchema = z.object({
   status: z.enum(['applied', 'scheduled', 'selected', 'under-review', 'submitted', 'rejected']),
   adminNotes: z.string().optional(),
-  rejectionReason: z.string().optional()
+  rejectionReason: z.string().optional(),
+  remarkText: z.string().optional()
 });

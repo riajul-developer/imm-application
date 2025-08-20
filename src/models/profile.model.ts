@@ -5,6 +5,7 @@ export interface IBasic {
   phone: string
   email: string
   dateOfBirth: Date
+  gender: Gender;
   educationLevel: string,
   profilePicFile: { name: string; url: string }
 }
@@ -37,15 +38,11 @@ export interface IEmergencyContact {
   phone: string;
 }
 
-export type Gender = 'male' | 'female' | 'other';
-export type MaritalStatus = 'single' | 'married' | 'divorced' | 'widowed';
+export type Gender = 'male' | 'female' | 'undisclosed';
 
 export interface IOther {
   fathersName: string;
   mothersName: string;
-  religion: string;
-  gender: Gender;
-  maritalStatus: MaritalStatus;
 }
 
 export interface IFile {
@@ -107,6 +104,10 @@ const userProfileSchema = new mongoose.Schema(
       phone: { type: String },
       email: { type: String },
       dateOfBirth: { type: Date },
+      gender: {
+        type: String,
+        enum: ['male', 'female', 'undisclosed']
+      },
       educationLevel: { type: String },
       profilePicFile: {
         name: { type: String },
@@ -144,14 +145,6 @@ const userProfileSchema = new mongoose.Schema(
       fathersName: { type: String },
       mothersName: { type: String },
       religion: { type: String },
-      gender: {
-        type: String,
-        enum: ['male', 'female', 'other']
-      },
-      maritalStatus: {
-        type: String,
-        enum: ['single', 'married', 'divorced', 'widowed']
-      }
     },
     cvFile: {
       name: { type: String },

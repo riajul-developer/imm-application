@@ -8,6 +8,7 @@ export interface IApplication extends mongoose.Document {
   submittedAt: Date
   rejectionReason?: string
   adminNotes?: string
+  remarkText?: string
   createdAt: Date
   updatedAt: Date
 }
@@ -33,6 +34,10 @@ const applicationSchema = new mongoose.Schema(
       trim: true
     },
     adminNotes: {
+      type: String,
+      trim: true
+    },
+    remarkText: {
       type: String,
       trim: true
     }

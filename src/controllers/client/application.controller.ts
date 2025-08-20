@@ -2,7 +2,6 @@ import { FastifyRequest, FastifyReply } from 'fastify'
 import {
   createApplication,
   getUserApplications,
-  checkUserCanCompleteProfile,
 } from '../../services/application.service'
 import { successResponse, badErrorResponse, serverErrorResponse, unauthorizedResponse } from '../../utils/response.util'
 import { getUserProfile } from '../../services/profile.service'
@@ -63,38 +62,5 @@ export const getMyApplication = async (request: FastifyRequest, reply: FastifyRe
   } catch (error) {
     console.error('Get application error:', error)
     return serverErrorResponse(reply, 'Failed to retrieve application')
-  }
-}
-
-// Check if user can complete profile
-export const canCompleteProfile = async (request: FastifyRequest, reply: FastifyReply) => {
-  try {
-    const userId = (request.user as any)?.userId
-    if (!userId) {
-      return badErrorResponse(reply, 'Unauthorized user')
-    }
-
-    const application = await getUserApplication(userId)
-
-    if (!application) {
-      return successResponse(reply, 'Profile completion status', { 
-        canComplete: false,
-        reason: 'No application submitted'
-      })
-    }
-
-    const canComplete = await checkUserCanCompleteProfile(userId)
-
-    return successResponse(reply, 'Profile completion status', {
-      canComplete,
-      applicationStatus: application.status,
-      reason: canComplete ? 'You can complete your profile' : 
-              application.status === 'rejected' ? 'Application rejected' :
-              'Application pending approval'
-    })
-
-  } catch (error) {
-    console.error('Check profile completion error:', error)
-    return serverErrorResponse(reply, 'Failed to check profile completion status')
   }
 }
