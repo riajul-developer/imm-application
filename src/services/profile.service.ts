@@ -246,6 +246,7 @@ export async function checkCanApply(userId: string): Promise<boolean> {
                     profile.basic?.dateOfBirth && 
                     profile.basic?.phone &&
                     profile.basic?.educationLevel &&
+                    profile.basic?.gender &&
                     profile.basic?.profilePicFile?.name &&
                     profile.basic?.profilePicFile?.url;
 
@@ -264,10 +265,7 @@ export async function checkCanApply(userId: string): Promise<boolean> {
                     profile.address?.permanent?.street;
 
   const hasOtherInfo = profile.other?.fathersName && 
-                      profile.other?.mothersName && 
-                      profile.other?.religion && 
-                      profile.other?.gender && 
-                      profile.other?.maritalStatus;
+                      profile.other?.mothersName 
 
   const hasCvFile = profile.cvFile?.name && profile.cvFile?.url;
 
