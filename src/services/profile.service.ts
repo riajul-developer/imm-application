@@ -3,29 +3,17 @@ import { UserProfile, IUserProfile, IIdentity, IBasic, IEmergencyContact, IAddre
 import { Application } from '../models/application.model'
 
 type BasicInfoPayload = {
-  userId: string
-  basic: {
-    fullName: string
-    phone: string
-    email: string
-    educationLevel: string
-    profilePicFile?: { name: string; url: string }
-  }
+  userId: mongoose.Types.ObjectId;
+  basic: IBasic
 }
 
 type IdentityPayload = {
-  userId: string
-  identity: {
-    number: string
-    docFiles: {type: string, side?: string, name: string; url: string }[]
-  }
+  userId: mongoose.Types.ObjectId;
+  identity: IIdentity
 }
 export interface EmergencyContactPayload {
- userId: string;
- emergencyContact: {
-   name: string;
-   phone: string;
- }
+ userId: mongoose.Types.ObjectId;
+ emergencyContact: IEmergencyContact
 }
 
 export interface AddressPayload {
@@ -343,8 +331,6 @@ export async function needAdditionalInfo(userId: string): Promise<boolean> {
     workInfoValid &&
     educationValid &&
     testimonialValid &&
-    myVerifiedValid &&
-    commitmentValid && 
     ndaValid &&
     agreementValid
   )

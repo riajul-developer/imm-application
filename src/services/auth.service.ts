@@ -36,11 +36,7 @@ export async function verifyOtp(phoneNumber: string, otp: string, request: any) 
 }
 
 
-// export async function loginAdmin(email: string, password: string, request: any) {
-//   const admin = await Admin.findOne({ email })
-//   if (!admin || !(await admin.comparePassword(password))) {
-//     throw new Error('Invalid credentials')
-//   }
-//   const token = request.server.jwt.sign({ adminId: admin._id, email, role: 'admin' })
-//   return { success: true, token, message: 'Login successful' }
-// }
+export async function getUserById(userId: string) {
+  const user = await User.findById(userId).select('-otp -otpExpiry');
+  return user;
+}

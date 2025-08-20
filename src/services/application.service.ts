@@ -1,10 +1,13 @@
 import { Application, IApplication } from '../models/application.model'
 import { UserProfile } from '../models/profile.model'
+import { sendSMS } from '../utils/sms.util';
+import { getUserById } from './auth.service';
 
 interface UpdateStatusInput {
   status: 'applied' | 'scheduled' | 'selected' | 'under-review' | 'submitted' | 'rejected';
   adminNotes?: string;
   rejectionReason?: string;
+  remarkText?: string;
 }
 
 export const createApplication = async (userId: string): Promise<IApplication> => {
@@ -77,7 +80,6 @@ export async function allApplications(
   const matchStage = matchConditions.length > 0 ? { $match: { $and: matchConditions } } : null;
 
   const aggregationPipeline: any[] = [
-    { $sort: { submittedAt: -1 } },
     {
       $lookup: {
         from: 'userprofiles',
@@ -92,6 +94,7 @@ export async function allApplications(
   if (matchStage) aggregationPipeline.push(matchStage);
 
   aggregationPipeline.push(
+    { $sort: { 'profile.basic.fullName': 1 } },
     { $skip: skip },
     { $limit: limit },
     {
@@ -121,6 +124,7 @@ export async function allApplications(
     },
     { $unwind: { path: '$profile', preserveNullAndEmptyArrays: true } }
   ];
+
   if (matchStage) countPipeline.push(matchStage);
   countPipeline.push({ $count: 'total' });
 
@@ -132,8 +136,8 @@ export async function allApplications(
   const hasPrevPage = page > 1;
 
   const params = {
-  page: String(page),
-  limit: String(limit),
+    page: String(page),
+    limit: String(limit),
     ...(search ? { search } : {}),
     ...(status ? { status } : {}),
     ...(appliedFrom ? { appliedFrom } : {}),
@@ -175,20 +179,42 @@ export async function getApplicationById(applicationId: string) {
 }
 
 export const updateApplication = async (applicationId: string, data: UpdateStatusInput) => {
+
   const application = await Application.findById(applicationId);
   if (!application) {
     throw new Error('Application not found');
   }
-
   application.status = data.status;
   if (data.adminNotes) application.adminNotes = data.adminNotes;
+
   if (data.status === 'rejected') {
     application.rejectionReason = data.rejectionReason ?? '';
   } else {
     application.rejectionReason = undefined;
   }
 
+  if (data.status === 'scheduled') {
+    application.remarkText = data.remarkText ?? '';
+
+    if(data.remarkText){
+      if (data.remarkText) {
+        try {
+          const user = await getUserById(application.userId.toString());
+          if (user?.phoneNumber) {
+            await sendSMS(user.phoneNumber, data.remarkText);
+          }
+        } catch (smsError) {
+          console.error('Failed to send SMS:', smsError);
+        }
+      }
+    }
+
+  } else {
+    application.remarkText = undefined;
+  }
+
   await application.save();
+
   return application;
 };
 

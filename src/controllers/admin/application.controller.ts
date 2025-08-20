@@ -37,7 +37,6 @@ export const getApplications = async (request: FastifyRequest, reply: FastifyRep
   }
 };
 
-
 export const getApplication = async (
   request: FastifyRequest<{ Params: { id: string } }>,
   reply: FastifyReply
@@ -66,6 +65,7 @@ export const updateApplication = async (request: FastifyRequest<{ Params: { id: 
       status: parsed.status,
       adminNotes: parsed.adminNotes,
       rejectionReason: parsed.status === 'rejected' ? parsed.rejectionReason : undefined,
+      remarkText: parsed.status === 'scheduled' ? parsed.remarkText : undefined,
     });
 
     return successResponse(reply, 'Application status updated successfully.', updatedApplication);
