@@ -1,6 +1,7 @@
 import mongoose from 'mongoose'
 import { UserProfile, IUserProfile, IIdentity, IBasic, IEmergencyContact, IAddress, IOther, IFile, IWorkInfo, IEducationFiles, INdaFiles, IAgreementFiles } from '../models/profile.model'
 import { Application } from '../models/application.model'
+import { deleteFileByUrl } from '../utils/fileDelete.util'
 
 type BasicInfoPayload = {
   userId: mongoose.Types.ObjectId;
@@ -295,6 +296,59 @@ export async function checkCanApply(userId: string): Promise<boolean> {
   return true;
 }
 
+export async function deleteProfile(userId: string): Promise<boolean> {
+  const profile = await UserProfile.findOne({ userId })
+  if (!profile) return false
+
+  const deletePromises: Promise<unknown>[] = []
+
+  if (profile.basic?.profilePicFile?.url) {
+    deletePromises.push(deleteFileByUrl(profile.basic.profilePicFile.url, 'uploads/profile/basics'))
+  }
+  profile.identity?.docFiles?.forEach((f) => {
+    if (f?.url) deletePromises.push(deleteFileByUrl(f.url, 'uploads/profile/identities'))
+  })
+  if (profile.cvFile?.url) {
+    deletePromises.push(deleteFileByUrl(profile.cvFile.url, 'uploads/profile/CVs'))
+  }
+  if (profile.educationFiles?.sscCertFile?.url) {
+    deletePromises.push(deleteFileByUrl(profile.educationFiles.sscCertFile.url, 'uploads/profile/educations'))
+  }
+  if (profile.educationFiles?.lastCertFile?.url) {
+    deletePromises.push(deleteFileByUrl(profile.educationFiles.lastCertFile.url, 'uploads/profile/educations'))
+  }
+  if (profile.testimonialFile?.url) {
+    deletePromises.push(deleteFileByUrl(profile.testimonialFile.url, 'uploads/profile/testimonials'))
+  }
+  if (profile.myVerifiedFile?.url) {
+    deletePromises.push(deleteFileByUrl(profile.myVerifiedFile.url, 'uploads/profile/verifies'))
+  }
+  if (profile.commitmentFile?.url) {
+    deletePromises.push(deleteFileByUrl(profile.commitmentFile.url, 'uploads/profile/commitments'))
+  }
+  if (profile.ndaFiles?.firstPageFile?.url) {
+    deletePromises.push(deleteFileByUrl(profile.ndaFiles.firstPageFile.url, 'uploads/profile/ndas'))
+  }
+  if (profile.ndaFiles?.secondPageFile?.url) {
+    deletePromises.push(deleteFileByUrl(profile.ndaFiles.secondPageFile.url, 'uploads/profile/ndas'))
+  }
+  if (profile.agreementFiles?.firstPageFile?.url) {
+    deletePromises.push(deleteFileByUrl(profile.agreementFiles.firstPageFile.url, 'uploads/profile/agreements'))
+  }
+  if (profile.agreementFiles?.secondPageFile?.url) {
+    deletePromises.push(deleteFileByUrl(profile.agreementFiles.secondPageFile.url, 'uploads/profile/agreements'))
+  }
+
+  const results = await Promise.allSettled(deletePromises)
+  results.forEach((result, i) => {
+    if (result.status === 'rejected') {
+      console.error(`[deleteProfile] File delete failed:`, result.reason)
+    }
+  })
+  await UserProfile.deleteOne({ userId })
+  return true
+}
+
 export async function needAdditionalInfo(userId: string): Promise<boolean> {
   const profile = await UserProfile.findOne({ userId })
 
@@ -313,17 +367,19 @@ export async function needAdditionalInfo(userId: string): Promise<boolean> {
     profile.workInfo?.shift &&
     profile.workInfo?.reference
 
-  const educationValid = profile.educationFiles?.sscCertFile
+  const educationValid = profile.educationFiles?.sscCertFile?.name && profile.educationFiles?.sscCertFile?.url
 
-  const testimonialValid = profile.testimonialFile
+  const testimonialValid = profile.testimonialFile?.name && profile.testimonialFile?.url
 
-  const myVerifiedValid = profile.myVerifiedFile
+  const ndaValid = profile.ndaFiles && (
+    (profile.ndaFiles.firstPageFile?.name && profile.ndaFiles.firstPageFile?.url) ||
+    (profile.ndaFiles.secondPageFile?.name && profile.ndaFiles.secondPageFile?.url)
+  )
 
-  const commitmentValid = profile.commitmentFile
-
-  const ndaValid = profile.ndaFiles
-
-  const agreementValid = profile.agreementFiles
+  const agreementValid = profile.agreementFiles && (
+    (profile.agreementFiles.firstPageFile?.name && profile.agreementFiles.firstPageFile?.url) ||
+    (profile.agreementFiles.secondPageFile?.name && profile.agreementFiles.secondPageFile?.url)
+  )
 
   const allValid = Boolean(
     workInfoValid &&

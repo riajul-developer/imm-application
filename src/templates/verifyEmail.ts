@@ -123,7 +123,7 @@ export const verifyTemplate = (data: VerifyTemplateData) => ({
           .verify-button {
             display: inline-block;
             background: #DC2626;
-            color: white;
+            color: #ffffff !important;
             padding: 12px 30px;
             text-decoration: none;
             border-radius: 6px;
