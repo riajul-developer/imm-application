@@ -5,7 +5,8 @@ import { badErrorResponse, notFoundResponse, serverErrorResponse, successRespons
 import { userBasicInfoSchema, emergencyContactSchema, addressSchema, otherSchema, userIdentitySchema, workInfoSchema} from '../../schemas/profile.schema'
 import { 
   checkCanApply, getUserProfile, needAdditionalInfo, upsertAddress, upsertAgreementFiles, upsertBasicInfo, upsertCommitmentFile, upsertCvFile,
-  upsertEducationFiles, upsertEmergencyContact, upsertIdentity, upsertMyVerifiedFile, upsertNdaFiles, upsertOther, upsertTestimonialFile, upsertWorkInfo 
+  upsertEducationFiles, upsertEmergencyContact, upsertIdentity, upsertMyVerifiedFile, upsertNdaFiles, upsertOther, upsertTestimonialFile, upsertWorkInfo,
+  deleteProfile
 } from '../../services/profile.service'
 import { processMultipartForm } from '../../utils/fileUpload.util'
 import { deleteFileByUrl } from '../../utils/fileDelete.util'
@@ -921,5 +922,21 @@ export const profileMe = async (request: FastifyRequest, reply: FastifyReply) =>
 
   } catch (error) {
     return serverErrorResponse(reply, 'Failed to retrieve profile')
+  }
+}
+
+export const profileDelete = async (request: FastifyRequest, reply: FastifyReply) => {
+  try {
+    const userId = (request.user as any)?.userId
+    if (!userId) {
+      return unauthorizedResponse(reply, 'Unauthorized. Please login.')
+    }
+    const deleted = await deleteProfile(userId)
+    if (!deleted) {
+      return notFoundResponse(reply, 'Profile not found.')
+    }
+    return successResponse(reply, 'Your profile has been deleted successfully.', null)
+  } catch (error) {
+    return serverErrorResponse(reply, 'Failed to delete profile. Please try again.')
   }
 }

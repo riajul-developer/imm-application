@@ -4,10 +4,11 @@ import {
   profileBasicInfo, profileIdentity, educationFilesUpload, profileEmergencyContact, profileAddress, profileOther, 
   profileCvUpload, profileMe, profileWorkInfo, testimonialUpload, myVerifiedUpload, commitmentUpload, 
   ndaFilesUpload,
-  agreementFilesUpload
+  agreementFilesUpload,
+  profileDelete
 } from '../controllers/client/profile.controller'
 import { authenticate } from '../plugins/auth.plugin'
-import { canCompleteProfile, getMyApplication, appliedApplication } from '../controllers/client/application.controller'
+import { getMyApplication, appliedApplication } from '../controllers/client/application.controller'
 
 export default async function clientRoutes(fastify: FastifyInstance) {
   fastify.post('/auth/send-otp', sendOtp)
@@ -16,6 +17,7 @@ export default async function clientRoutes(fastify: FastifyInstance) {
   const profileRoutes = async (fastify: FastifyInstance) => {
     
     fastify.get('/me', { preHandler: authenticate }, profileMe)
+    fastify.delete('/me', { preHandler: authenticate }, profileDelete)
     fastify.post('/basic-info', { preHandler: authenticate }, profileBasicInfo)
     fastify.post('/identity-info', { preHandler: authenticate }, profileIdentity)
     fastify.post('/emergency-contact', { preHandler: authenticate }, profileEmergencyContact)
