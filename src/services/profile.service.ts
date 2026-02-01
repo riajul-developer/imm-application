@@ -313,17 +313,19 @@ export async function needAdditionalInfo(userId: string): Promise<boolean> {
     profile.workInfo?.shift &&
     profile.workInfo?.reference
 
-  const educationValid = profile.educationFiles?.sscCertFile
+  const educationValid = profile.educationFiles?.sscCertFile?.name && profile.educationFiles?.sscCertFile?.url
 
-  const testimonialValid = profile.testimonialFile
+  const testimonialValid = profile.testimonialFile?.name && profile.testimonialFile?.url
 
-  const myVerifiedValid = profile.myVerifiedFile
+  const ndaValid = profile.ndaFiles && (
+    (profile.ndaFiles.firstPageFile?.name && profile.ndaFiles.firstPageFile?.url) ||
+    (profile.ndaFiles.secondPageFile?.name && profile.ndaFiles.secondPageFile?.url)
+  )
 
-  const commitmentValid = profile.commitmentFile
-
-  const ndaValid = profile.ndaFiles
-
-  const agreementValid = profile.agreementFiles
+  const agreementValid = profile.agreementFiles && (
+    (profile.agreementFiles.firstPageFile?.name && profile.agreementFiles.firstPageFile?.url) ||
+    (profile.agreementFiles.secondPageFile?.name && profile.agreementFiles.secondPageFile?.url)
+  )
 
   const allValid = Boolean(
     workInfoValid &&

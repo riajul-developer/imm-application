@@ -144,7 +144,7 @@ ${data.companyName || 'The Team'}
         .verify-button {
           display: inline-block;
           background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-          color: white;
+          color: #ffffff !important;
           padding: 18px 40px;
           text-decoration: none;
           border-radius: 50px;
@@ -458,7 +458,7 @@ ${data.companyName || 'The Team'}
         .reset-button {
           display: inline-block;
           background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-          color: white;
+          color: #ffffff !important;
           padding: 18px 40px;
           text-decoration: none;
           border-radius: 50px;
